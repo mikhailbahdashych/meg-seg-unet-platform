@@ -3,6 +3,8 @@
 .DS_Store
 .idea/
 .vscode
+.claude
+CLAUDE.md
 
 # Compiled output
 med-seg-frontend/dist

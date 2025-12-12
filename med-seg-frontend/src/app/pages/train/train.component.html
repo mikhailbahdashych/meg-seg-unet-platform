@@ -1,0 +1,216 @@
+<div class="train-container">
+  <div class="train-header">
+    <h1>Train U-Net Model</h1>
+    <p class="subtitle">Configure and train a new medical image segmentation model</p>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">
+    <i class="error-icon">⚠</i>
+    {{ errorMessage }}
+  </div>
+
+  <div class="train-content">
+    <!-- Dataset Selection -->
+    <div class="section">
+      <h2>Dataset Selection</h2>
+      <div class="form-group">
+        <label for="dataset">Select Dataset *</label>
+        <select
+          id="dataset"
+          [(ngModel)]="selectedDatasetId"
+          [disabled]="isSubmitting"
+        >
+          <option [value]="null" disabled>Choose a dataset...</option>
+          <option *ngFor="let dataset of datasets" [value]="dataset.id">
+            {{ dataset.name }} ({{ dataset.fileCount }} images, {{ dataset.totalSizeMb.toFixed(2) }} MB)
+          </option>
+        </select>
+        <p class="help-text" *ngIf="datasets.length === 0">
+          No datasets available. Please upload a dataset first.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="modelName">Model Name *</label>
+        <input
+          id="modelName"
+          type="text"
+          [(ngModel)]="modelName"
+          placeholder="e.g., Lung Segmentation v1"
+          [disabled]="isSubmitting"
+        />
+      </div>
+    </div>
+
+    <!-- U-Net Architecture -->
+    <div class="section">
+      <h2>U-Net Architecture</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="inputChannels">Input Channels</label>
+          <input
+            id="inputChannels"
+            type="number"
+            [(ngModel)]="architecture.inputChannels"
+            min="1"
+            max="4"
+            [disabled]="isSubmitting"
+          />
+          <p class="help-text">RGB: 3, Grayscale: 1</p>
+        </div>
+
+        <div class="form-group">
+          <label for="outputChannels">Output Channels</label>
+          <input
+            id="outputChannels"
+            type="number"
+            [(ngModel)]="architecture.outputChannels"
+            min="1"
+            max="10"
+            [disabled]="isSubmitting"
+          />
+          <p class="help-text">Binary: 1, Multi-class: 2+</p>
+        </div>
+
+        <div class="form-group">
+          <label for="baseFilters">Base Filters</label>
+          <select
+            id="baseFilters"
+            [(ngModel)]="architecture.baseFilters"
+            [disabled]="isSubmitting"
+          >
+            <option [value]="32">32 (Lightweight)</option>
+            <option [value]="64">64 (Standard)</option>
+            <option [value]="128">128 (High Capacity)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="depth">Network Depth</label>
+          <select
+            id="depth"
+            [(ngModel)]="architecture.depth"
+            [disabled]="isSubmitting"
+          >
+            <option [value]="3">3 (Shallow)</option>
+            <option [value]="4">4 (Standard)</option>
+            <option [value]="5">5 (Deep)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training Hyperparameters -->
+    <div class="section">
+      <h2>Training Hyperparameters</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="epochs">Epochs</label>
+          <input
+            id="epochs"
+            type="number"
+            [(ngModel)]="training.epochs"
+            min="1"
+            max="200"
+            [disabled]="isSubmitting"
+          />
+          <p class="help-text">Number of training iterations</p>
+        </div>
+
+        <div class="form-group">
+          <label for="batchSize">Batch Size</label>
+          <select
+            id="batchSize"
+            [(ngModel)]="training.batchSize"
+            [disabled]="isSubmitting"
+          >
+            <option [value]="2">2</option>
+            <option [value]="4">4</option>
+            <option [value]="8">8</option>
+            <option [value]="16">16</option>
+          </select>
+          <p class="help-text">Samples per batch</p>
+        </div>
+
+        <div class="form-group">
+          <label for="learningRate">Learning Rate</label>
+          <input
+            id="learningRate"
+            type="number"
+            [(ngModel)]="training.learningRate"
+            step="0.0001"
+            min="0.0001"
+            max="0.1"
+            [disabled]="isSubmitting"
+          />
+          <p class="help-text">Step size for optimization</p>
+        </div>
+
+        <div class="form-group">
+          <label for="validationSplit">Validation Split</label>
+          <input
+            id="validationSplit"
+            type="number"
+            [(ngModel)]="training.validationSplit"
+            step="0.05"
+            min="0.1"
+            max="0.5"
+            [disabled]="isSubmitting"
+          />
+          <p class="help-text">Fraction for validation (0.1-0.5)</p>
+        </div>
+
+        <div class="form-group">
+          <label for="optimizer">Optimizer</label>
+          <select
+            id="optimizer"
+            [(ngModel)]="training.optimizer"
+            [disabled]="isSubmitting"
+          >
+            <option value="adam">Adam (Recommended)</option>
+            <option value="sgd">SGD</option>
+            <option value="rmsprop">RMSprop</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="lossFunction">Loss Function</label>
+          <select
+            id="lossFunction"
+            [(ngModel)]="training.lossFunction"
+            [disabled]="isSubmitting"
+          >
+            <option value="dice">Dice Loss (Recommended)</option>
+            <option value="bce">Binary Cross-Entropy</option>
+            <option value="focal">Focal Loss</option>
+            <option value="combined">Combined (Dice + BCE)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button
+        type="button"
+        class="btn-secondary"
+        [routerLink]="['/models']"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="startTraining()"
+        [disabled]="!canStartTraining()"
+      >
+        <span *ngIf="!isSubmitting">Start Training</span>
+        <span *ngIf="isSubmitting">
+          <span class="spinner"></span>
+          Starting...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

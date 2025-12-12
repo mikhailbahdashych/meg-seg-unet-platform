@@ -2,8 +2,10 @@ import { Injectable } from '@nestjs/common';
 import {
   S3Client,
   ListObjectsV2Command,
-  DeleteObjectsCommand
+  DeleteObjectsCommand,
+  GetObjectCommand
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -114,5 +116,24 @@ export class S3Service {
     }
 
     return totalSize;
+  }
+
+  async getPresignedDownloadUrl(
+    s3Key: string,
+    expiresIn: number = 3600
+  ): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: s3Key
+      });
+
+      const url = await getSignedUrl(this.s3Client, command, { expiresIn });
+      return url;
+    } catch (error) {
+      throw new UploadException(
+        `Failed to generate presigned URL: ${error.message}`
+      );
+    }
   }
 }

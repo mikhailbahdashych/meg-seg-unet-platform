@@ -1,0 +1,213 @@
+<div class="model-details-container" *ngIf="!isLoading && model">
+  <!-- Header -->
+  <div class="details-header">
+    <div class="header-left">
+      <button class="btn-back" [routerLink]="['/models']">
+        ← Back to Models
+      </button>
+      <h1>{{ model.name }}</h1>
+      <span class="status-badge" [ngClass]="getStatusClass(model.status)">
+        {{ getStatusLabel(model.status) }}
+      </span>
+    </div>
+    <div class="header-actions">
+      <button
+        class="btn-secondary"
+        *ngIf="model.status === 'completed'"
+        (click)="downloadModel()"
+      >
+        📥 Download Model
+      </button>
+      <button class="btn-danger" (click)="deleteModel()">
+        🗑️ Delete
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-banner" *ngIf="model.status === 'failed' && model.errorMessage">
+    <div class="error-icon">⚠️</div>
+    <div>
+      <h3>Training Failed</h3>
+      <p>{{ model.errorMessage }}</p>
+    </div>
+  </div>
+
+  <!-- Training in Progress -->
+  <div class="progress-banner" *ngIf="isActiveStatus(model.status)">
+    <div class="progress-content">
+      <div class="progress-icon">
+        <div class="spinner"></div>
+      </div>
+      <div>
+        <h3>{{ getStatusLabel(model.status) }}</h3>
+        <p *ngIf="model.status === 'training'">
+          Your model is currently being trained. This page will update automatically.
+        </p>
+        <p *ngIf="model.status === 'provisioning'">
+          Setting up training environment...
+        </p>
+        <p *ngIf="model.status === 'pending'">
+          Waiting to start training...
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="content-grid">
+    <!-- U-Net Architecture -->
+    <div class="card">
+      <h2>U-Net Architecture</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Input Channels</span>
+          <span class="value">{{ model.inputChannels }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Output Channels</span>
+          <span class="value">{{ model.outputChannels }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Base Filters</span>
+          <span class="value">{{ model.baseFilters }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Network Depth</span>
+          <span class="value">{{ model.depth }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training Hyperparameters -->
+    <div class="card">
+      <h2>Training Configuration</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Epochs</span>
+          <span class="value">{{ model.epochs }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Batch Size</span>
+          <span class="value">{{ model.batchSize }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Learning Rate</span>
+          <span class="value">{{ model.learningRate }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Validation Split</span>
+          <span class="value">{{ (model.validationSplit * 100) }}%</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Optimizer</span>
+          <span class="value">{{ model.optimizer | uppercase }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Loss Function</span>
+          <span class="value">{{ model.lossFunction | uppercase }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Training Metrics -->
+    <div class="card" *ngIf="model.status === 'completed'">
+      <h2>Training Metrics</h2>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value">{{ (model.finalDiceScore! * 100).toFixed(2) }}%</div>
+          <div class="metric-label">Dice Score</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ model.finalLoss?.toFixed(4) }}</div>
+          <div class="metric-label">Final Loss</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">{{ formatDuration(model.trainingDurationSeconds) }}</div>
+          <div class="metric-label">Training Time</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timestamps -->
+    <div class="card">
+      <h2>Timeline</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <span class="timeline-label">Created</span>
+            <span class="timeline-value">{{ formatDate(model.createdAt) }}</span>
+          </div>
+        </div>
+        <div class="timeline-item" *ngIf="model.startedAt">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <span class="timeline-label">Training Started</span>
+            <span class="timeline-value">{{ formatDate(model.startedAt) }}</span>
+          </div>
+        </div>
+        <div class="timeline-item" *ngIf="model.completedAt">
+          <div class="timeline-dot completed"></div>
+          <div class="timeline-content">
+            <span class="timeline-label">Completed</span>
+            <span class="timeline-value">{{ formatDate(model.completedAt) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage Info -->
+    <div class="card">
+      <h2>Storage Information</h2>
+      <div class="info-list">
+        <div class="info-item">
+          <span class="label">S3 Bucket</span>
+          <span class="value mono">{{ model.s3Bucket }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">S3 Key</span>
+          <span class="value mono">{{ model.s3Key }}</span>
+        </div>
+        <div class="info-item" *ngIf="model.modelSizeMb">
+          <span class="label">Model Size</span>
+          <span class="value">{{ model.modelSizeMb.toFixed(2) }} MB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RunPod Info (if available) -->
+    <div class="card" *ngIf="model.runpodPodId">
+      <h2>RunPod Instance</h2>
+      <div class="info-list">
+        <div class="info-item">
+          <span class="label">Pod ID</span>
+          <span class="value mono">{{ model.runpodPodId }}</span>
+        </div>
+        <div class="info-item" *ngIf="model.runpodHost">
+          <span class="label">Host</span>
+          <span class="value mono">{{ model.runpodHost }}</span>
+        </div>
+        <div class="info-item" *ngIf="model.runpodPort">
+          <span class="label">Port</span>
+          <span class="value">{{ model.runpodPort }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="isLoading">
+  <div class="spinner-large"></div>
+  <p>Loading model details...</p>
+</div>
+
+<!-- Error State -->
+<div class="error-state" *ngIf="errorMessage && !isLoading">
+  <div class="error-icon-large">⚠️</div>
+  <h2>{{ errorMessage }}</h2>
+  <button class="btn-primary" [routerLink]="['/models']">
+    Back to Models
+  </button>
+</div>

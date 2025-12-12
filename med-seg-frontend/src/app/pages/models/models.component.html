@@ -1,0 +1,141 @@
+<div class="models-container">
+  <div class="models-header">
+    <div>
+      <h1>My Models</h1>
+      <p class="subtitle">View and manage your trained U-Net models</p>
+    </div>
+    <button class="btn-primary" [routerLink]="['/train']">
+      <span class="icon">+</span>
+      Train New Model
+    </button>
+  </div>
+
+  <!-- Status Filter -->
+  <div class="filter-bar">
+    <div class="filter-tabs">
+      <button
+        class="filter-tab"
+        [class.active]="selectedStatus === 'all'"
+        (click)="onStatusFilterChange('all')"
+      >
+        All <span class="count">{{ getModelCount('all') }}</span>
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="selectedStatus === 'completed'"
+        (click)="onStatusFilterChange('completed')"
+      >
+        Completed <span class="count">{{ getModelCount('completed') }}</span>
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="selectedStatus === 'training'"
+        (click)="onStatusFilterChange('training')"
+      >
+        Training <span class="count">{{ getModelCount('training') }}</span>
+      </button>
+      <button
+        class="filter-tab"
+        [class.active]="selectedStatus === 'failed'"
+        (click)="onStatusFilterChange('failed')"
+      >
+        Failed <span class="count">{{ getModelCount('failed') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="error-message" *ngIf="errorMessage">
+    <i class="error-icon">⚠</i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner-large"></div>
+    <p>Loading models...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!isLoading && filteredModels.length === 0">
+    <div class="empty-icon">🤖</div>
+    <h3>No models found</h3>
+    <p *ngIf="selectedStatus === 'all'">
+      You haven't trained any models yet. Start by training your first U-Net model!
+    </p>
+    <p *ngIf="selectedStatus !== 'all'">
+      No models with status "{{ getStatusLabel(selectedStatus) }}"
+    </p>
+    <button class="btn-primary" [routerLink]="['/train']" *ngIf="selectedStatus === 'all'">
+      Train Your First Model
+    </button>
+  </div>
+
+  <!-- Models Grid -->
+  <div class="models-grid" *ngIf="!isLoading && filteredModels.length > 0">
+    <div
+      class="model-card"
+      *ngFor="let model of filteredModels"
+      (click)="viewModelDetails(model.id)"
+    >
+      <div class="model-card-header">
+        <h3 class="model-name">{{ model.name }}</h3>
+        <span class="status-badge" [ngClass]="getStatusClass(model.status)">
+          {{ getStatusLabel(model.status) }}
+        </span>
+      </div>
+
+      <div class="model-card-body">
+        <div class="model-info">
+          <div class="info-row">
+            <span class="info-label">Architecture:</span>
+            <span class="info-value">
+              U-Net (Depth: {{ model.depth }}, Filters: {{ model.baseFilters }})
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Training:</span>
+            <span class="info-value">
+              {{ model.epochs }} epochs, batch {{ model.batchSize }}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Loss Function:</span>
+            <span class="info-value">{{ model.lossFunction | uppercase }}</span>
+          </div>
+          <div class="info-row" *ngIf="model.finalDiceScore">
+            <span class="info-label">Dice Score:</span>
+            <span class="info-value metric">
+              {{ (model.finalDiceScore * 100).toFixed(2) }}%
+            </span>
+          </div>
+          <div class="info-row" *ngIf="model.finalLoss">
+            <span class="info-label">Final Loss:</span>
+            <span class="info-value metric">{{ model.finalLoss.toFixed(4) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="model-card-footer">
+        <div class="footer-info">
+          <div class="footer-item">
+            <span class="footer-label">Created:</span>
+            <span class="footer-value">{{ formatDate(model.createdAt) }}</span>
+          </div>
+          <div class="footer-item" *ngIf="model.trainingDurationSeconds">
+            <span class="footer-label">Duration:</span>
+            <span class="footer-value">{{ formatDuration(model.trainingDurationSeconds) }}</span>
+          </div>
+        </div>
+
+        <button
+          class="btn-delete"
+          (click)="deleteModel(model, $event)"
+          title="Delete model"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
