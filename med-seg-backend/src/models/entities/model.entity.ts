@@ -31,7 +31,7 @@ export class Model {
   @Column({ name: 's3_key' })
   s3Key: string;
 
-  // U-Net Architecture Parameters
+  // U-Net Architecture Parameters - Basic
   @Column('int', { name: 'input_channels', default: 3 })
   inputChannels: number;
 
@@ -43,6 +43,40 @@ export class Model {
 
   @Column('int', { default: 4 })
   depth: number;
+
+  // U-Net Architecture Parameters - Advanced
+  @Column('int', { name: 'kernel_size', default: 3 })
+  kernelSize: number;
+
+  @Column('int', { name: 'num_convs_per_block', default: 2 })
+  numConvsPerBlock: number;
+
+  @Column({ name: 'pooling_type', default: 'max' })
+  poolingType: 'max' | 'avg' | 'strided_conv';
+
+  @Column('int', { name: 'pooling_size', default: 2 })
+  poolingSize: number;
+
+  @Column({ name: 'upsampling_type', default: 'transpose' })
+  upsamplingType: 'transpose' | 'bilinear' | 'nearest';
+
+  @Column('int', { name: 'upsampling_size', default: 2 })
+  upsamplingSize: number;
+
+  @Column({ name: 'use_batch_norm', default: true })
+  useBatchNorm: boolean;
+
+  @Column({ default: 'relu' })
+  activation: 'relu' | 'leaky_relu' | 'elu' | 'selu';
+
+  @Column('real', { name: 'dropout_rate', default: 0.0 })
+  dropoutRate: number;
+
+  @Column({ name: 'skip_connections', default: true })
+  skipConnections: boolean;
+
+  @Column('int', { name: 'filter_multiplier', default: 2 })
+  filterMultiplier: number;
 
   // Training Hyperparameters
   @Column('int', { default: 50 })

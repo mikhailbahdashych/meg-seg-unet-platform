@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { Dataset } from '@interfaces/dataset.interface';
 import { DatasetService } from '@shared/services/dataset.service';
+import { SettingsService } from '@services/settings.service';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss']
 })
@@ -17,10 +19,37 @@ export class UploadComponent implements OnInit {
   selectedFile: File | null = null;
   datasetName = '';
 
-  constructor(private datasetService: DatasetService) {}
+  // Credentials check
+  credentialsConfigured = false;
+  checkingCredentials = true;
+
+  constructor(
+    private datasetService: DatasetService,
+    private settingsService: SettingsService
+  ) {}
 
   ngOnInit(): void {
-    this.loadDatasets();
+    this.checkCredentials();
+  }
+
+  checkCredentials(): void {
+    this.checkingCredentials = true;
+    this.settingsService.getCredentialsStatus().subscribe({
+      next: (status) => {
+        this.credentialsConfigured =
+          status.awsConfigured && status.awsValidated;
+        this.checkingCredentials = false;
+
+        if (this.credentialsConfigured) {
+          this.loadDatasets();
+        }
+      },
+      error: (error) => {
+        console.error('Error checking credentials:', error);
+        this.checkingCredentials = false;
+        this.credentialsConfigured = false;
+      }
+    });
   }
 
   loadDatasets(): void {

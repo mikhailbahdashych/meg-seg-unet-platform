@@ -76,6 +76,50 @@
           <span class="label">Network Depth</span>
           <span class="value">{{ model.depth }}</span>
         </div>
+        <div class="info-item">
+          <span class="label">Kernel Size</span>
+          <span class="value">{{ model.kernelSize }}×{{ model.kernelSize }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Convs per Block</span>
+          <span class="value">{{ model.numConvsPerBlock }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Pooling Type</span>
+          <span class="value">{{ formatPoolingType(model.poolingType) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Pooling Size</span>
+          <span class="value">{{ model.poolingSize }}×{{ model.poolingSize }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Upsampling Type</span>
+          <span class="value">{{ formatUpsamplingType(model.upsamplingType) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Upsampling Size</span>
+          <span class="value">{{ model.upsamplingSize }}×{{ model.upsamplingSize }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Activation</span>
+          <span class="value">{{ formatActivation(model.activation) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Filter Multiplier</span>
+          <span class="value">×{{ model.filterMultiplier }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Dropout Rate</span>
+          <span class="value">{{ model.dropoutRate }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Batch Normalization</span>
+          <span class="value">{{ model.useBatchNorm ? 'Enabled' : 'Disabled' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Skip Connections</span>
+          <span class="value">{{ model.skipConnections ? 'Enabled' : 'Disabled' }}</span>
+        </div>
       </div>
     </div>
 

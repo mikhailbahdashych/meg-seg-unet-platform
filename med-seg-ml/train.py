@@ -13,6 +13,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 from unet import create_unet
+from unet_configurable import ConfigurableUNet
 from dataset import create_dataloaders
 from losses import get_loss_function
 
@@ -127,12 +128,23 @@ class ModelTrainer:
         """Initialize model, optimizer, and loss function"""
         hyperparams = self.config['hyperparameters']
 
-        # Create U-Net model
-        self.model = create_unet(
+        # Create configurable U-Net model
+        self.model = ConfigurableUNet(
             in_channels=hyperparams.get('input_channels', 3),
             out_channels=hyperparams.get('output_channels', 1),
             base_filters=hyperparams.get('base_filters', 64),
-            depth=hyperparams.get('depth', 4)
+            depth=hyperparams.get('depth', 4),
+            kernel_size=hyperparams.get('kernel_size', 3),
+            num_convs_per_block=hyperparams.get('num_convs_per_block', 2),
+            pooling_type=hyperparams.get('pooling_type', 'max'),
+            pooling_size=hyperparams.get('pooling_size', 2),
+            upsampling_type=hyperparams.get('upsampling_type', 'transpose'),
+            upsampling_size=hyperparams.get('upsampling_size', 2),
+            use_batch_norm=hyperparams.get('use_batch_norm', True),
+            activation=hyperparams.get('activation', 'relu'),
+            dropout_rate=hyperparams.get('dropout_rate', 0.0),
+            skip_connections=hyperparams.get('skip_connections', True),
+            filter_multiplier=hyperparams.get('filter_multiplier', 2)
         ).to(self.device)
 
         print(f"Model created: {sum(p.numel() for p in self.model.parameters()):,} parameters")

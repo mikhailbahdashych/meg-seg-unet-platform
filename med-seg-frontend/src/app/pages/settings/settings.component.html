@@ -1,0 +1,173 @@
+<div class="settings-container">
+  <div class="settings-header">
+    <h1>Settings</h1>
+    <p class="subtitle">Configure your AWS and RunPod credentials</p>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading settings...</p>
+  </div>
+
+  <div *ngIf="!isLoading" class="settings-content">
+    <!-- AWS Credentials Section -->
+    <div class="section">
+      <h2>AWS Credentials</h2>
+
+      <div *ngIf="credentialsStatus?.awsConfigured" class="status-badge validated">
+        <span>Configured</span>
+        <span *ngIf="credentialsStatus?.awsValidated" class="validated-text">& Validated</span>
+      </div>
+
+      <div *ngIf="credentialsStatus?.awsValidated" class="info-box">
+        <div class="info-row">
+          <span class="label">Access Key ID:</span>
+          <span class="value mono">{{ credentialsStatus?.awsAccessKeyIdMasked }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Region:</span>
+          <span class="value">{{ credentialsStatus?.awsRegion }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">S3 Bucket:</span>
+          <span class="value mono">{{ credentialsStatus?.awsS3BucketName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Last Validated:</span>
+          <span class="value">{{ formatDate(credentialsStatus?.awsLastValidatedAt) }}</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="awsAccessKeyId">Access Key ID</label>
+        <input
+          id="awsAccessKeyId"
+          type="text"
+          [(ngModel)]="awsAccessKeyId"
+          placeholder="AKIA..."
+          [disabled]="isSavingAws"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="awsSecretAccessKey">Secret Access Key</label>
+        <input
+          id="awsSecretAccessKey"
+          type="password"
+          [(ngModel)]="awsSecretAccessKey"
+          placeholder="Enter your secret key"
+          [disabled]="isSavingAws"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="awsRegion">Region</label>
+        <select id="awsRegion" [(ngModel)]="awsRegion" [disabled]="isSavingAws">
+          <option value="us-east-1">US East (N. Virginia)</option>
+          <option value="us-east-2">US East (Ohio)</option>
+          <option value="us-west-1">US West (N. California)</option>
+          <option value="us-west-2">US West (Oregon)</option>
+          <option value="eu-central-1">EU (Frankfurt)</option>
+          <option value="eu-west-1">EU (Ireland)</option>
+          <option value="eu-west-2">EU (London)</option>
+          <option value="eu-west-3">EU (Paris)</option>
+          <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+          <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+          <option value="ap-southeast-2">Asia Pacific (Sydney)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="awsS3BucketName">S3 Bucket Name</label>
+        <input
+          id="awsS3BucketName"
+          type="text"
+          [(ngModel)]="awsS3BucketName"
+          placeholder="my-bucket-name"
+          [disabled]="isSavingAws"
+        />
+      </div>
+
+      <div *ngIf="awsSuccessMessage" class="success-message">
+        {{ awsSuccessMessage }}
+      </div>
+
+      <div *ngIf="awsErrorMessage" class="error-message">
+        {{ awsErrorMessage }}
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="saveAwsCredentials()"
+          [disabled]="!canSaveAws()"
+        >
+          <span *ngIf="!isSavingAws">Save & Validate AWS Credentials</span>
+          <span *ngIf="isSavingAws">
+            <span class="spinner-small"></span>
+            Saving & Validating...
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RunPod Credentials Section -->
+    <div class="section">
+      <h2>RunPod API Key</h2>
+
+      <div *ngIf="credentialsStatus?.runpodConfigured" class="status-badge validated">
+        <span>Configured</span>
+        <span *ngIf="credentialsStatus?.runpodValidated" class="validated-text">& Validated</span>
+      </div>
+
+      <div *ngIf="credentialsStatus?.runpodValidated" class="info-box">
+        <div class="info-row">
+          <span class="label">API Key:</span>
+          <span class="value mono">{{ credentialsStatus?.runpodApiKeyMasked }}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Last Validated:</span>
+          <span class="value">{{ formatDate(credentialsStatus?.runpodLastValidatedAt) }}</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="runpodApiKey">API Key</label>
+        <input
+          id="runpodApiKey"
+          type="password"
+          [(ngModel)]="runpodApiKey"
+          placeholder="rpa_..."
+          [disabled]="isSavingRunpod"
+        />
+        <p class="help-text">
+          Get your API key from <a href="https://www.runpod.io/console/user/settings" target="_blank">RunPod Settings</a>
+        </p>
+      </div>
+
+      <div *ngIf="runpodSuccessMessage" class="success-message">
+        {{ runpodSuccessMessage }}
+      </div>
+
+      <div *ngIf="runpodErrorMessage" class="error-message">
+        {{ runpodErrorMessage }}
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="saveRunpodCredentials()"
+          [disabled]="!canSaveRunpod()"
+        >
+          <span *ngIf="!isSavingRunpod">Save RunPod API Key</span>
+          <span *ngIf="isSavingRunpod">
+            <span class="spinner-small"></span>
+            Saving...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

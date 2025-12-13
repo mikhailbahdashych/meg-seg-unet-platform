@@ -5,6 +5,7 @@ import { UploadComponent } from './pages/upload/upload.component';
 import { TrainComponent } from './pages/train/train.component';
 import { ModelsComponent } from './pages/models/models.component';
 import { ModelDetailsComponent } from './pages/model-details/model-details.component';
+import { SettingsComponent } from './pages/settings/settings.component';
 
 export const routes: Routes = [
   {
@@ -30,6 +31,10 @@ export const routes: Routes = [
       {
         path: 'models/:id',
         component: ModelDetailsComponent
+      },
+      {
+        path: 'settings',
+        component: SettingsComponent
       }
     ]
   }

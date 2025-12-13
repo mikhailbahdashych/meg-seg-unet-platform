@@ -1,8 +1,22 @@
 <div class="upload-page">
   <h1>Dataset Upload</h1>
 
+  <!-- Checking Credentials -->
+  <div *ngIf="checkingCredentials" class="loading-state">
+    <div class="spinner"></div>
+    <p>Checking credentials...</p>
+  </div>
+
+  <!-- Credentials Required Guard -->
+  <div *ngIf="!checkingCredentials && !credentialsConfigured" class="credentials-warning">
+    <div class="warning-icon">⚠️</div>
+    <h2>AWS Credentials Required</h2>
+    <p>You need to configure your AWS credentials before you can upload datasets.</p>
+    <a routerLink="/settings" class="btn-primary">Go to Settings</a>
+  </div>
+
   <!-- Upload Section -->
-  <div class="upload-section">
+  <div *ngIf="!checkingCredentials && credentialsConfigured" class="upload-section">
     <div class="upload-columns">
       <!-- Left Column: File Upload -->
       <div class="upload-column left-column">

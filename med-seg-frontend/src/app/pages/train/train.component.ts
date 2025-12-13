@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { DatasetService } from '@services/dataset.service';
 import { ModelService } from '@services/model.service';
+import { SettingsService } from '@services/settings.service';
 import { Dataset } from '@interfaces/dataset.interface';
 
 @Component({
@@ -20,12 +21,33 @@ export class TrainComponent implements OnInit {
   isSubmitting = false;
   errorMessage = '';
 
-  // U-Net Architecture
+  // Credentials check
+  runpodConfigured = false;
+  checkingCredentials = true;
+
+  showAdvancedArchitecture = false;
+
+  // U-Net Architecture - Basic
   architecture = {
     inputChannels: 3,
     outputChannels: 1,
     baseFilters: 64,
     depth: 4
+  };
+
+  // U-Net Architecture - Advanced
+  advancedArchitecture = {
+    kernelSize: 3,
+    numConvsPerBlock: 2,
+    poolingType: 'max' as 'max' | 'avg' | 'strided_conv',
+    poolingSize: 2,
+    upsamplingType: 'transpose' as 'transpose' | 'bilinear' | 'nearest',
+    upsamplingSize: 2,
+    useBatchNorm: true,
+    activation: 'relu' as 'relu' | 'leaky_relu' | 'elu' | 'selu',
+    dropoutRate: 0.0,
+    skipConnections: true,
+    filterMultiplier: 2
   };
 
   // Training Hyperparameters
@@ -41,11 +63,31 @@ export class TrainComponent implements OnInit {
   constructor(
     private datasetService: DatasetService,
     private modelService: ModelService,
+    private settingsService: SettingsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadDatasets();
+    this.checkCredentials();
+  }
+
+  checkCredentials(): void {
+    this.checkingCredentials = true;
+    this.settingsService.getCredentialsStatus().subscribe({
+      next: (status) => {
+        this.runpodConfigured = status.runpodConfigured;
+        this.checkingCredentials = false;
+
+        if (this.runpodConfigured) {
+          this.loadDatasets();
+        }
+      },
+      error: (error) => {
+        console.error('Error checking credentials:', error);
+        this.checkingCredentials = false;
+        this.runpodConfigured = false;
+      }
+    });
   }
 
   loadDatasets(): void {
@@ -79,10 +121,24 @@ export class TrainComponent implements OnInit {
     const payload = {
       name: this.modelName.trim(),
       datasetId: this.selectedDatasetId,
+      // Basic architecture
       inputChannels: this.architecture.inputChannels,
       outputChannels: this.architecture.outputChannels,
       baseFilters: this.architecture.baseFilters,
       depth: this.architecture.depth,
+      // Advanced architecture
+      kernelSize: this.advancedArchitecture.kernelSize,
+      numConvsPerBlock: this.advancedArchitecture.numConvsPerBlock,
+      poolingType: this.advancedArchitecture.poolingType,
+      poolingSize: this.advancedArchitecture.poolingSize,
+      upsamplingType: this.advancedArchitecture.upsamplingType,
+      upsamplingSize: this.advancedArchitecture.upsamplingSize,
+      useBatchNorm: this.advancedArchitecture.useBatchNorm,
+      activation: this.advancedArchitecture.activation,
+      dropoutRate: this.advancedArchitecture.dropoutRate,
+      skipConnections: this.advancedArchitecture.skipConnections,
+      filterMultiplier: this.advancedArchitecture.filterMultiplier,
+      // Training hyperparameters
       epochs: this.training.epochs,
       batchSize: this.training.batchSize,
       learningRate: this.training.learningRate,

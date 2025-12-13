@@ -14,27 +14,66 @@ import { ApiConfigService } from '@shared/services/api-config.service';
 
 @Injectable()
 export class S3Service {
-  private s3Client: S3Client;
-  private bucketName: string;
+  private s3Client: S3Client | null = null;
+  private bucketName: string | null = null;
 
-  constructor(private apiConfigService: ApiConfigService) {
+  constructor(private apiConfigService: ApiConfigService) {}
+
+  private async initializeClient(): Promise<void> {
+    try {
+      // Use environment variables (backward compatibility)
+      // When user configures credentials via Settings, SettingsService will call
+      // initializeWithCredentials() directly to override these
+      this.s3Client = new S3Client({
+        region: this.apiConfigService.awsRegion,
+        credentials: {
+          accessKeyId: this.apiConfigService.awsAccessKeyId,
+          secretAccessKey: this.apiConfigService.awsSecretAccessKey
+        }
+      });
+      this.bucketName = this.apiConfigService.awsS3BucketName;
+    } catch (error) {
+      throw new Error(`Failed to initialize S3 client: ${error.message}`);
+    }
+  }
+
+  async initializeWithCredentials(credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    region: string;
+    bucketName: string;
+  }): Promise<void> {
     this.s3Client = new S3Client({
-      region: this.apiConfigService.awsRegion,
+      region: credentials.region,
       credentials: {
-        accessKeyId: this.apiConfigService.awsAccessKeyId,
-        secretAccessKey: this.apiConfigService.awsSecretAccessKey
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey
       }
     });
-    this.bucketName = this.apiConfigService.awsS3BucketName;
+    this.bucketName = credentials.bucketName;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (!this.s3Client) {
+      await this.initializeClient();
+    }
+  }
+
+  async refreshCredentials(): Promise<void> {
+    this.s3Client = null;
+    this.bucketName = null;
+    await this.initializeClient();
   }
 
   async uploadFile(filePath: string, s3Key: string): Promise<void> {
+    await this.ensureInitialized();
+
     try {
       const fileStream = fs.createReadStream(filePath);
       const upload = new Upload({
-        client: this.s3Client,
+        client: this.s3Client!,
         params: {
-          Bucket: this.bucketName,
+          Bucket: this.bucketName!,
           Key: s3Key,
           Body: fileStream
         }
@@ -47,6 +86,8 @@ export class S3Service {
   }
 
   async uploadDirectory(localDir: string, s3Prefix: string): Promise<number> {
+    await this.ensureInitialized();
+
     const files = fs.readdirSync(localDir);
     let uploadedCount = 0;
 
@@ -65,14 +106,16 @@ export class S3Service {
   }
 
   async deleteDirectory(s3Prefix: string): Promise<void> {
+    await this.ensureInitialized();
+
     try {
       // List all objects with the given prefix
       const listCommand = new ListObjectsV2Command({
-        Bucket: this.bucketName,
+        Bucket: this.bucketName!,
         Prefix: s3Prefix
       });
 
-      const listedObjects = await this.s3Client.send(listCommand);
+      const listedObjects = await this.s3Client!.send(listCommand);
 
       if (!listedObjects.Contents || listedObjects.Contents.length === 0) {
         return;
@@ -80,13 +123,13 @@ export class S3Service {
 
       // Delete all objects
       const deleteCommand = new DeleteObjectsCommand({
-        Bucket: this.bucketName,
+        Bucket: this.bucketName!,
         Delete: {
           Objects: listedObjects.Contents.map(({ Key }) => ({ Key }))
         }
       });
 
-      await this.s3Client.send(deleteCommand);
+      await this.s3Client!.send(deleteCommand);
 
       // If there are more objects, recursively delete
       if (listedObjects.IsTruncated) {
@@ -122,18 +165,39 @@ export class S3Service {
     s3Key: string,
     expiresIn: number = 3600
   ): Promise<string> {
+    await this.ensureInitialized();
+
     try {
       const command = new GetObjectCommand({
-        Bucket: this.bucketName,
+        Bucket: this.bucketName!,
         Key: s3Key
       });
 
-      const url = await getSignedUrl(this.s3Client, command, { expiresIn });
+      const url = await getSignedUrl(this.s3Client!, command, { expiresIn });
       return url;
     } catch (error) {
       throw new UploadException(
         `Failed to generate presigned URL: ${error.message}`
       );
+    }
+  }
+
+  async testConnection(): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.ensureInitialized();
+
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucketName!,
+        MaxKeys: 1
+      });
+
+      await this.s3Client!.send(command);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'Failed to connect to S3'
+      };
     }
   }
 }

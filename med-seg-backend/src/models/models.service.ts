@@ -80,11 +80,28 @@ export class ModelsService {
       s3Bucket: this.apiConfigService.awsS3BucketName,
       s3Key: s3Key,
 
-      // U-Net architecture
+      // U-Net architecture - Basic
       inputChannels: trainModelDto.inputChannels || 3,
       outputChannels: trainModelDto.outputChannels || 1,
       baseFilters: trainModelDto.baseFilters || 64,
       depth: trainModelDto.depth || 4,
+
+      // U-Net architecture - Advanced
+      kernelSize: trainModelDto.kernelSize || 3,
+      numConvsPerBlock: trainModelDto.numConvsPerBlock || 2,
+      poolingType: trainModelDto.poolingType || 'max',
+      poolingSize: trainModelDto.poolingSize || 2,
+      upsamplingType: trainModelDto.upsamplingType || 'transpose',
+      upsamplingSize: trainModelDto.upsamplingSize || 2,
+      useBatchNorm:
+        trainModelDto.useBatchNorm !== undefined ? trainModelDto.useBatchNorm : true,
+      activation: trainModelDto.activation || 'relu',
+      dropoutRate: trainModelDto.dropoutRate || 0.0,
+      skipConnections:
+        trainModelDto.skipConnections !== undefined
+          ? trainModelDto.skipConnections
+          : true,
+      filterMultiplier: trainModelDto.filterMultiplier || 2,
 
       // Training hyperparameters
       epochs: trainModelDto.epochs || 50,

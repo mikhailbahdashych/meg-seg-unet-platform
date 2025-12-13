@@ -5,8 +5,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { Dataset } from '@datasets/entities/dataset.entity';
 import { Model } from './models/entities/model.entity';
+import { Credentials } from './settings/entities/credentials.entity';
 import { DatasetsModule } from '@datasets/datasets.module';
 import { ModelsModule } from './models/models.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -17,11 +19,12 @@ import { ModelsModule } from './models/models.module';
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'medseg.db',
-      entities: [Dataset, Model],
+      entities: [Dataset, Model, Credentials],
       synchronize: true
     }),
     DatasetsModule,
-    ModelsModule
+    ModelsModule,
+    SettingsModule
   ],
   controllers: [AppController],
   providers: [AppService]

@@ -95,6 +95,9 @@ med-seg-backend/*.db
 med-seg-backend/*.sqlite
 med-seg-backend/medseg.db
 
+# Encryption key
+med-seg-backend/medseg-encryption.key
+
 # Runtime data
 med-seg-backend/pids
 med-seg-backend/*.pid

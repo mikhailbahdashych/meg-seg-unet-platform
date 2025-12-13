@@ -184,4 +184,32 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
       return `${secs}s`;
     }
   }
+
+  formatPoolingType(type: string): string {
+    const types: { [key: string]: string } = {
+      max: 'Max Pooling',
+      avg: 'Average Pooling',
+      strided_conv: 'Strided Convolution'
+    };
+    return types[type] || type;
+  }
+
+  formatUpsamplingType(type: string): string {
+    const types: { [key: string]: string } = {
+      transpose: 'Transpose Convolution',
+      bilinear: 'Bilinear Interpolation',
+      nearest: 'Nearest Neighbor'
+    };
+    return types[type] || type;
+  }
+
+  formatActivation(activation: string): string {
+    const activations: { [key: string]: string } = {
+      relu: 'ReLU',
+      leaky_relu: 'Leaky ReLU',
+      elu: 'ELU',
+      selu: 'SELU'
+    };
+    return activations[activation] || activation.toUpperCase();
+  }
 }

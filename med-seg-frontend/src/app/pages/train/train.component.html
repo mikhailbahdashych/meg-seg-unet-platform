@@ -4,12 +4,26 @@
     <p class="subtitle">Configure and train a new medical image segmentation model</p>
   </div>
 
-  <div class="error-message" *ngIf="errorMessage">
+  <!-- Checking Credentials -->
+  <div *ngIf="checkingCredentials" class="loading-state">
+    <div class="spinner-large"></div>
+    <p>Checking credentials...</p>
+  </div>
+
+  <!-- Credentials Required Guard -->
+  <div *ngIf="!checkingCredentials && !runpodConfigured" class="credentials-warning">
+    <div class="warning-icon">⚠️</div>
+    <h2>RunPod API Key Required</h2>
+    <p>You need to configure your RunPod API key before you can train models.</p>
+    <a routerLink="/settings" class="btn-primary">Go to Settings</a>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage && runpodConfigured">
     <i class="error-icon">⚠</i>
     {{ errorMessage }}
   </div>
 
-  <div class="train-content">
+  <div *ngIf="!checkingCredentials && runpodConfigured" class="train-content">
     <!-- Dataset Selection -->
     <div class="section">
       <h2>Dataset Selection</h2>
@@ -96,6 +110,174 @@
             <option [value]="4">4 (Standard)</option>
             <option [value]="5">5 (Deep)</option>
           </select>
+        </div>
+      </div>
+
+      <!-- Advanced Architecture Toggle -->
+      <div class="advanced-toggle">
+        <button
+          type="button"
+          class="btn-toggle"
+          (click)="showAdvancedArchitecture = !showAdvancedArchitecture"
+          [disabled]="isSubmitting"
+        >
+          {{ showAdvancedArchitecture ? '▼' : '▶' }} Advanced Architecture Options
+        </button>
+      </div>
+
+      <!-- Advanced Architecture Options -->
+      <div class="advanced-section" *ngIf="showAdvancedArchitecture">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="kernelSize">Convolution Kernel Size</label>
+            <select
+              id="kernelSize"
+              [(ngModel)]="advancedArchitecture.kernelSize"
+              [disabled]="isSubmitting"
+            >
+              <option [value]="3">3×3</option>
+              <option [value]="5">5×5</option>
+              <option [value]="7">7×7</option>
+            </select>
+            <p class="help-text">Size of convolution filters</p>
+          </div>
+
+          <div class="form-group">
+            <label for="numConvsPerBlock">Convolutions per Block</label>
+            <select
+              id="numConvsPerBlock"
+              [(ngModel)]="advancedArchitecture.numConvsPerBlock"
+              [disabled]="isSubmitting"
+            >
+              <option [value]="1">1</option>
+              <option [value]="2">2 (Standard)</option>
+              <option [value]="3">3</option>
+            </select>
+            <p class="help-text">Number of conv layers per block</p>
+          </div>
+
+          <div class="form-group">
+            <label for="poolingType">Pooling Type</label>
+            <select
+              id="poolingType"
+              [(ngModel)]="advancedArchitecture.poolingType"
+              [disabled]="isSubmitting"
+            >
+              <option value="max">Max Pooling</option>
+              <option value="avg">Average Pooling</option>
+              <option value="strided_conv">Strided Convolution</option>
+            </select>
+            <p class="help-text">Downsampling method</p>
+          </div>
+
+          <div class="form-group">
+            <label for="poolingSize">Pooling Size</label>
+            <select
+              id="poolingSize"
+              [(ngModel)]="advancedArchitecture.poolingSize"
+              [disabled]="isSubmitting"
+            >
+              <option [value]="2">2×2</option>
+              <option [value]="3">3×3</option>
+              <option [value]="4">4×4</option>
+            </select>
+            <p class="help-text">Pooling window size</p>
+          </div>
+
+          <div class="form-group">
+            <label for="upsamplingType">Upsampling Type</label>
+            <select
+              id="upsamplingType"
+              [(ngModel)]="advancedArchitecture.upsamplingType"
+              [disabled]="isSubmitting"
+            >
+              <option value="transpose">Transpose Convolution</option>
+              <option value="bilinear">Bilinear Interpolation</option>
+              <option value="nearest">Nearest Neighbor</option>
+            </select>
+            <p class="help-text">Upsampling method</p>
+          </div>
+
+          <div class="form-group">
+            <label for="upsamplingSize">Upsampling Size</label>
+            <select
+              id="upsamplingSize"
+              [(ngModel)]="advancedArchitecture.upsamplingSize"
+              [disabled]="isSubmitting"
+            >
+              <option [value]="2">2×2</option>
+              <option [value]="3">3×3</option>
+              <option [value]="4">4×4</option>
+            </select>
+            <p class="help-text">Upsampling scale factor</p>
+          </div>
+
+          <div class="form-group">
+            <label for="activation">Activation Function</label>
+            <select
+              id="activation"
+              [(ngModel)]="advancedArchitecture.activation"
+              [disabled]="isSubmitting"
+            >
+              <option value="relu">ReLU</option>
+              <option value="leaky_relu">Leaky ReLU</option>
+              <option value="elu">ELU</option>
+              <option value="selu">SELU</option>
+            </select>
+            <p class="help-text">Non-linearity function</p>
+          </div>
+
+          <div class="form-group">
+            <label for="filterMultiplier">Filter Multiplier</label>
+            <select
+              id="filterMultiplier"
+              [(ngModel)]="advancedArchitecture.filterMultiplier"
+              [disabled]="isSubmitting"
+            >
+              <option [value]="1">1 (No increase)</option>
+              <option [value]="2">2 (Double per stage)</option>
+              <option [value]="3">3 (Triple per stage)</option>
+            </select>
+            <p class="help-text">Filter increase per stage</p>
+          </div>
+
+          <div class="form-group">
+            <label for="dropoutRate">Dropout Rate</label>
+            <input
+              id="dropoutRate"
+              type="number"
+              [(ngModel)]="advancedArchitecture.dropoutRate"
+              step="0.05"
+              min="0"
+              max="0.5"
+              [disabled]="isSubmitting"
+            />
+            <p class="help-text">0.0 = no dropout, 0.5 = max</p>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                [(ngModel)]="advancedArchitecture.useBatchNorm"
+                [disabled]="isSubmitting"
+              />
+              Use Batch Normalization
+            </label>
+            <p class="help-text">Normalize activations</p>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                [(ngModel)]="advancedArchitecture.skipConnections"
+                [disabled]="isSubmitting"
+              />
+              Enable Skip Connections
+            </label>
+            <p class="help-text">Standard U-Net skip connections</p>
+          </div>
         </div>
       </div>
     </div>
