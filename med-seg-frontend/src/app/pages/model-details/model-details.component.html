@@ -3,7 +3,8 @@
   <div class="details-header">
     <div class="header-left">
       <button class="btn-back" [routerLink]="['/models']">
-        ← Back to Models
+        <img src="assets/icons/arrows/back.svg" alt="Back" class="back-icon" />
+        Back to Models
       </button>
       <h1>{{ model.name }}</h1>
       <span class="status-badge" [ngClass]="getStatusClass(model.status)">
@@ -16,17 +17,17 @@
         *ngIf="model.status === 'completed'"
         (click)="downloadModel()"
       >
-        📥 Download Model
+<img src="assets/icons/emojis/download.png" alt="Download" class="btn-icon" /> Download Model
       </button>
       <button class="btn-danger" (click)="deleteModel()">
-        🗑️ Delete
+<img src="assets/icons/emojis/trash.png" alt="Delete" class="btn-icon" /> Delete
       </button>
     </div>
   </div>
 
   <!-- Error Message -->
   <div class="error-banner" *ngIf="model.status === 'failed' && model.errorMessage">
-    <div class="error-icon">⚠️</div>
+    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
     <div>
       <h3>Training Failed</h3>
       <p>{{ model.errorMessage }}</p>
@@ -113,7 +114,7 @@
         </div>
         <div class="info-item">
           <span class="label">Kernel Size</span>
-          <span class="value">{{ model.kernelSize }}×{{ model.kernelSize }}</span>
+          <span class="value">{{ model.kernelSize }}&times;{{ model.kernelSize }}</span>
         </div>
         <div class="info-item">
           <span class="label">Convs per Block</span>
@@ -125,7 +126,7 @@
         </div>
         <div class="info-item">
           <span class="label">Pooling Size</span>
-          <span class="value">{{ model.poolingSize }}×{{ model.poolingSize }}</span>
+          <span class="value">{{ model.poolingSize }}&times;{{ model.poolingSize }}</span>
         </div>
         <div class="info-item">
           <span class="label">Upsampling Type</span>
@@ -133,7 +134,7 @@
         </div>
         <div class="info-item">
           <span class="label">Upsampling Size</span>
-          <span class="value">{{ model.upsamplingSize }}×{{ model.upsamplingSize }}</span>
+          <span class="value">{{ model.upsamplingSize }}&times;{{ model.upsamplingSize }}</span>
         </div>
         <div class="info-item">
           <span class="label">Activation</span>
@@ -141,7 +142,7 @@
         </div>
         <div class="info-item">
           <span class="label">Filter Multiplier</span>
-          <span class="value">×{{ model.filterMultiplier }}</span>
+          <span class="value">&times;{{ model.filterMultiplier }}</span>
         </div>
         <div class="info-item">
           <span class="label">Dropout Rate</span>
@@ -284,7 +285,7 @@
 
 <!-- Error State -->
 <div class="error-state" *ngIf="errorMessage && !isLoading">
-  <div class="error-icon-large">⚠️</div>
+  <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon-large" />
   <h2>{{ errorMessage }}</h2>
   <button class="btn-primary" [routerLink]="['/models']">
     Back to Models

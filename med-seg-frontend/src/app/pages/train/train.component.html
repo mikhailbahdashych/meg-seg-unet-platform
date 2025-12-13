@@ -12,14 +12,14 @@
 
   <!-- Credentials Required Guard -->
   <div *ngIf="!checkingCredentials && !runpodConfigured" class="credentials-warning">
-    <div class="warning-icon">⚠️</div>
+    <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-icon" />
     <h2>RunPod API Key Required</h2>
     <p>You need to configure your RunPod API key before you can train models.</p>
     <a routerLink="/settings" class="btn-primary">Go to Settings</a>
   </div>
 
   <div class="error-message" *ngIf="errorMessage && runpodConfigured">
-    <i class="error-icon">⚠</i>
+    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
     {{ errorMessage }}
   </div>
 
@@ -75,7 +75,8 @@
           <option value="" disabled>Choose a GPU...</option>
           <option *ngFor="let gpu of gpuTypes" [value]="gpu.id">
             {{ gpu.displayName }} ({{ gpu.memoryInGb }}GB VRAM, ${{ gpu.uninterruptablePrice.toFixed(2) }}/hr)
-            <span *ngIf="gpu.recommended"> ⭐ Recommended</span>
+            <img *ngIf="gpu.recommended" src="assets/icons/emojis/star.png" alt="Recommended" class="recommended-icon" />
+            <span *ngIf="gpu.recommended"> Recommended</span>
           </option>
         </select>
         <p class="help-text">
@@ -84,7 +85,7 @@
       </div>
 
       <div *ngIf="!loadingGpuTypes && gpuTypes.length === 0" class="warning-message">
-        <i>⚠</i> No GPUs currently available. Please try again later.
+        <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-inline" /> No GPUs currently available. Please try again later.
       </div>
     </div>
 
@@ -153,7 +154,8 @@
           (click)="showAdvancedArchitecture = !showAdvancedArchitecture"
           [disabled]="isSubmitting"
         >
-          {{ showAdvancedArchitecture ? '▼' : '▶' }} Advanced Architecture Options
+          <img [src]="showAdvancedArchitecture ? 'assets/icons/arrows/down.svg' : 'assets/icons/arrows/right.svg'" alt="Toggle" class="toggle-icon" />
+          Advanced Architecture Options
         </button>
       </div>
 
@@ -167,9 +169,9 @@
               [(ngModel)]="advancedArchitecture.kernelSize"
               [disabled]="isSubmitting"
             >
-              <option [value]="3">3×3</option>
-              <option [value]="5">5×5</option>
-              <option [value]="7">7×7</option>
+              <option [value]="3">3&times;3</option>
+              <option [value]="5">5&times;5</option>
+              <option [value]="7">7&times;7</option>
             </select>
             <p class="help-text">Size of convolution filters</p>
           </div>
@@ -209,9 +211,9 @@
               [(ngModel)]="advancedArchitecture.poolingSize"
               [disabled]="isSubmitting"
             >
-              <option [value]="2">2×2</option>
-              <option [value]="3">3×3</option>
-              <option [value]="4">4×4</option>
+              <option [value]="2">2&times;2</option>
+              <option [value]="3">3&times;3</option>
+              <option [value]="4">4&times;4</option>
             </select>
             <p class="help-text">Pooling window size</p>
           </div>
@@ -237,9 +239,9 @@
               [(ngModel)]="advancedArchitecture.upsamplingSize"
               [disabled]="isSubmitting"
             >
-              <option [value]="2">2×2</option>
-              <option [value]="3">3×3</option>
-              <option [value]="4">4×4</option>
+              <option [value]="2">2&times;2</option>
+              <option [value]="3">3&times;3</option>
+              <option [value]="4">4&times;4</option>
             </select>
             <p class="help-text">Upsampling scale factor</p>
           </div>

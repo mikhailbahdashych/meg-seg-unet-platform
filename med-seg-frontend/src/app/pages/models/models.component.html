@@ -46,7 +46,7 @@
 
   <!-- Error Message -->
   <div class="error-message" *ngIf="errorMessage">
-    <i class="error-icon">⚠</i>
+    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
     {{ errorMessage }}
   </div>
 
@@ -58,7 +58,7 @@
 
   <!-- Empty State -->
   <div class="empty-state" *ngIf="!isLoading && filteredModels.length === 0">
-    <div class="empty-icon">🤖</div>
+    <img src="assets/icons/emojis/robot.png" alt="Empty" class="empty-icon" />
     <h3>No models found</h3>
     <p *ngIf="selectedStatus === 'all'">
       You haven't trained any models yet. Start by training your first U-Net model!
@@ -133,7 +133,7 @@
           (click)="deleteModel(model, $event)"
           title="Delete model"
         >
-          🗑️
+          <img src="assets/icons/emojis/trash.png" alt="Delete" />
         </button>
       </div>
     </div>
