@@ -27,7 +27,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
-    "@nestjs/schedule": "^6.1.0",
+    "@nestjs/schedule": "^4.1.2",
     "@nestjs/typeorm": "^11.0.0",
     "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
@@ -41,7 +41,7 @@
     "sqlite3": "^5.1.7",
     "ssh2": "^1.17.0",
     "typeorm": "^0.3.27",
-    "uuid": "^13.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
