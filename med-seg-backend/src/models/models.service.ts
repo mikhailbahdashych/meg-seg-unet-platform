@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Model } from './entities/model.entity';
@@ -7,6 +13,7 @@ import { TrainModelDto } from './dto/train-model.dto';
 import { UpdateModelDto } from './dto/update-model.dto';
 import { S3Service } from '../shared/services/s3.service';
 import { ApiConfigService } from '../shared/services/api-config.service';
+import { RunPodOrchestratorService } from '../training/services/runpod-orchestrator.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -17,7 +24,9 @@ export class ModelsService {
     @InjectRepository(Dataset)
     private datasetsRepository: Repository<Dataset>,
     private s3Service: S3Service,
-    private apiConfigService: ApiConfigService
+    private apiConfigService: ApiConfigService,
+    @Inject(forwardRef(() => RunPodOrchestratorService))
+    private runpodOrchestratorService: RunPodOrchestratorService
   ) {}
 
   async findAll(): Promise<Model[]> {
@@ -116,9 +125,13 @@ export class ModelsService {
 
     const savedModel = await this.modelsRepository.save(model);
 
-    // TODO: Integrate with RunPod to actually start training
-    // For now, the model is just created with status='pending'
-    console.log('Model created. RunPod integration to be added.');
+    // START TRAINING ON RUNPOD (async - don't wait)
+    this.runpodOrchestratorService
+      .startTraining(savedModel, dataset, trainModelDto.gpuTypeId)
+      .catch((error) => {
+        console.error(`Failed to start training for model ${savedModel.id}:`, error);
+        this.updateStatus(savedModel.id, 'failed', error.message);
+      });
 
     return savedModel;
   }
@@ -176,6 +189,20 @@ export class ModelsService {
   async delete(id: number): Promise<void> {
     const model = await this.findOne(id);
 
+    // Terminate active RunPod pod if training is in progress
+    if (
+      model.runpodPodId &&
+      ['provisioning', 'training', 'uploading'].includes(model.status)
+    ) {
+      try {
+        await this.runpodOrchestratorService.terminatePod(id);
+        console.log(`Terminated RunPod pod ${model.runpodPodId} for model ${id}`);
+      } catch (error) {
+        console.error('Error terminating RunPod pod:', error);
+        // Continue with deletion even if pod termination fails
+      }
+    }
+
     // Delete from S3 if model was completed
     if (model.status === 'completed') {
       try {
@@ -194,9 +221,20 @@ export class ModelsService {
   async getTrainingStatus(id: number): Promise<any> {
     const model = await this.findOne(id);
 
-    // TODO: When RunPod integration is added, fetch real-time status from RunPod
-    // For now, just return the database status
+    // For active trainings, fetch live status from RunPod
+    if (['provisioning', 'training', 'uploading'].includes(model.status)) {
+      try {
+        const liveStatus = await this.runpodOrchestratorService.monitorTraining(id);
+        if (liveStatus) {
+          return liveStatus;
+        }
+      } catch (error) {
+        console.error('Error fetching live status:', error);
+        // Fall back to database status
+      }
+    }
 
+    // Return database status for completed/failed/cancelled
     return {
       status: model.status,
       errorMessage: model.errorMessage,

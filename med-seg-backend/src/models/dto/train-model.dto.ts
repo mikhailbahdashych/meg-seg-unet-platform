@@ -1,6 +1,7 @@
 export class TrainModelDto {
   name: string;
   datasetId: number;
+  gpuTypeId: string; // RunPod GPU type identifier (e.g., "NVIDIA RTX A6000")
 
   // U-Net Architecture - Basic (optional - will use defaults if not provided)
   inputChannels?: number; // default: 3

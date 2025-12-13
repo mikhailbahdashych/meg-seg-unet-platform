@@ -111,7 +111,7 @@ export class Model {
   @Column('text', { name: 'error_message', nullable: true })
   errorMessage: string;
 
-  // RunPod Instance Details (will be populated later when RunPod integration is added)
+  // RunPod Instance Details
   @Column({ name: 'runpod_pod_id', nullable: true })
   runpodPodId: string;
 
@@ -123,6 +123,25 @@ export class Model {
 
   @Column({ name: 'runpod_username', nullable: true })
   runpodUsername: string;
+
+  @Column({ name: 'runpod_gpu_type', nullable: true })
+  runpodGpuType: string;
+
+  @Column('real', { name: 'runpod_cost_per_hour', nullable: true })
+  runpodCostPerHour: number;
+
+  // Real-time Training Progress
+  @Column('int', { name: 'current_epoch', nullable: true })
+  currentEpoch: number;
+
+  @Column('real', { name: 'current_loss', nullable: true })
+  currentLoss: number;
+
+  @Column('real', { name: 'current_dice_score', nullable: true })
+  currentDiceScore: number;
+
+  @Column('int', { name: 'progress_percent', nullable: true })
+  progressPercent: number;
 
   // Training Metrics
   @Column('real', { name: 'final_loss', nullable: true })

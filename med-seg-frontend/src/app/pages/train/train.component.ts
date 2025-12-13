@@ -5,6 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { DatasetService } from '@services/dataset.service';
 import { ModelService } from '@services/model.service';
 import { SettingsService } from '@services/settings.service';
+import { TrainingService, GpuType } from '@services/training.service';
 import { Dataset } from '@interfaces/dataset.interface';
 
 @Component({
@@ -24,6 +25,11 @@ export class TrainComponent implements OnInit {
   // Credentials check
   runpodConfigured = false;
   checkingCredentials = true;
+
+  // GPU Selection
+  gpuTypes: GpuType[] = [];
+  selectedGpuType: string = '';
+  loadingGpuTypes = false;
 
   showAdvancedArchitecture = false;
 
@@ -64,11 +70,13 @@ export class TrainComponent implements OnInit {
     private datasetService: DatasetService,
     private modelService: ModelService,
     private settingsService: SettingsService,
+    private trainingService: TrainingService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.checkCredentials();
+    this.loadGpuTypes();
   }
 
   checkCredentials(): void {
@@ -102,10 +110,30 @@ export class TrainComponent implements OnInit {
     });
   }
 
+  loadGpuTypes(): void {
+    this.loadingGpuTypes = true;
+    this.trainingService.getAvailableGpuTypes().subscribe({
+      next: (types) => {
+        this.gpuTypes = types;
+        // Pre-select recommended GPU
+        const recommended = types.find((t) => t.recommended);
+        if (recommended) {
+          this.selectedGpuType = recommended.id;
+        }
+        this.loadingGpuTypes = false;
+      },
+      error: (error) => {
+        console.error('Error loading GPU types:', error);
+        this.loadingGpuTypes = false;
+      }
+    });
+  }
+
   canStartTraining(): boolean {
     return (
       this.selectedDatasetId !== null &&
       this.modelName.trim().length > 0 &&
+      this.selectedGpuType !== '' &&
       !this.isSubmitting
     );
   }
@@ -121,6 +149,7 @@ export class TrainComponent implements OnInit {
     const payload = {
       name: this.modelName.trim(),
       datasetId: this.selectedDatasetId,
+      gpuTypeId: this.selectedGpuType,
       // Basic architecture
       inputChannels: this.architecture.inputChannels,
       outputChannels: this.architecture.outputChannels,

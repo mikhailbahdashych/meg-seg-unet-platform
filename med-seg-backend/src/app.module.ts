@@ -9,6 +9,7 @@ import { Credentials } from './settings/entities/credentials.entity';
 import { DatasetsModule } from '@datasets/datasets.module';
 import { ModelsModule } from './models/models.module';
 import { SettingsModule } from './settings/settings.module';
+import { TrainingModule } from './training/training.module';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { SettingsModule } from './settings/settings.module';
     }),
     DatasetsModule,
     ModelsModule,
-    SettingsModule
+    SettingsModule,
+    TrainingModule
   ],
   controllers: [AppController],
   providers: [AppService]

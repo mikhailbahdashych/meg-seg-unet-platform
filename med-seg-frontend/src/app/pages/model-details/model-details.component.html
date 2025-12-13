@@ -45,11 +45,46 @@
           Your model is currently being trained. This page will update automatically.
         </p>
         <p *ngIf="model.status === 'provisioning'">
-          Setting up training environment...
+          Setting up GPU pod on RunPod...
+        </p>
+        <p *ngIf="model.status === 'uploading'">
+          Uploading trained model to S3...
         </p>
         <p *ngIf="model.status === 'pending'">
           Waiting to start training...
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-time Training Progress -->
+  <div class="training-progress-card" *ngIf="trainingStatus && model.status === 'training'">
+    <h2>Training Progress</h2>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar" [style.width.%]="trainingStatus.progressPercent || 0">
+        {{ trainingStatus.progressPercent || 0 }}%
+      </div>
+    </div>
+
+    <div class="training-metrics-grid">
+      <div class="metric-item">
+        <span class="metric-label">Epoch</span>
+        <span class="metric-value">
+          {{ trainingStatus.currentEpoch || 0 }} / {{ trainingStatus.totalEpochs || model.epochs }}
+        </span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Current Loss</span>
+        <span class="metric-value">
+          {{ trainingStatus.currentLoss ? trainingStatus.currentLoss.toFixed(4) : 'N/A' }}
+        </span>
+      </div>
+      <div class="metric-item">
+        <span class="metric-label">Dice Score</span>
+        <span class="metric-value">
+          {{ trainingStatus.currentDiceScore ? (trainingStatus.currentDiceScore * 100).toFixed(2) + '%' : 'N/A' }}
+        </span>
       </div>
     </div>
   </div>

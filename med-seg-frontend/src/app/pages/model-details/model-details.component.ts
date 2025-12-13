@@ -16,6 +16,7 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
   isLoading = true;
   errorMessage = '';
   pollingInterval: any;
+  trainingStatus: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -59,33 +60,36 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
   }
 
   startPolling(): void {
-    // Poll every 5 seconds
-    this.pollingInterval = setInterval(() => {
-      if (this.model) {
-        this.modelService.getTrainingStatus(this.model.id).subscribe({
-          next: (status) => {
-            if (this.model) {
-              this.model.status = status.status;
-              this.model.errorMessage = status.errorMessage;
-              this.model.finalLoss = status.finalLoss;
-              this.model.finalDiceScore = status.finalDiceScore;
-              this.model.trainingDurationSeconds =
-                status.trainingDurationSeconds;
-              this.model.startedAt = status.startedAt;
-              this.model.completedAt = status.completedAt;
+    // Load status immediately
+    this.loadTrainingStatus();
 
-              // Stop polling if no longer in active state
-              if (!this.isActiveStatus(this.model.status)) {
-                this.stopPolling();
-              }
-            }
-          },
-          error: (error) => {
-            console.error('Error fetching status:', error);
-          }
-        });
+    // Poll every 10 seconds for real-time updates
+    this.pollingInterval = setInterval(() => {
+      this.loadTrainingStatus();
+    }, 10000);
+  }
+
+  loadTrainingStatus(): void {
+    if (!this.model) return;
+
+    this.modelService.getTrainingStatus(this.model.id).subscribe({
+      next: (status) => {
+        this.trainingStatus = status;
+
+        // Update model status if changed
+        if (this.model && status.status !== this.model.status) {
+          this.loadModel(this.model.id);
+        }
+
+        // Stop polling if no longer in active state
+        if (!this.isActiveStatus(status.status)) {
+          this.stopPolling();
+        }
+      },
+      error: (error) => {
+        console.error('Error fetching training status:', error);
       }
-    }, 5000);
+    });
   }
 
   stopPolling(): void {
