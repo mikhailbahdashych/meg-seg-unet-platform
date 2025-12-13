@@ -11,3 +11,79 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Global Icon Sizing */
+img.nav-icon,
+img.feature-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+img.upload-icon {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
+}
+
+img.error-icon,
+img.warning-icon,
+img.warning-inline {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+img.empty-icon {
+  width: 64px;
+  height: 64px;
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+img.error-icon-large {
+  width: 80px;
+  height: 80px;
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+img.btn-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+img.back-icon,
+img.toggle-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+img.recommended-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.action-button img {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+
+.btn-delete img {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}

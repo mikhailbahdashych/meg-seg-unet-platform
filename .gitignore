@@ -3,6 +3,8 @@
 .DS_Store
 .idea/
 .vscode
+.claude
+CLAUDE.md
 
 # Compiled output
 med-seg-frontend/dist
@@ -92,6 +94,9 @@ med-seg-backend/temp/
 med-seg-backend/*.db
 med-seg-backend/*.sqlite
 med-seg-backend/medseg.db
+
+# Encryption key
+med-seg-backend/medseg-encryption.key
 
 # Runtime data
 med-seg-backend/pids

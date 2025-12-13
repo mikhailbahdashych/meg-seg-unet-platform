@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { Dataset } from '@interfaces/dataset.interface';
 import { DatasetService } from '@shared/services/dataset.service';
+import { SettingsService } from '@services/settings.service';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss']
 })
@@ -17,10 +19,41 @@ export class UploadComponent implements OnInit {
   selectedFile: File | null = null;
   datasetName = '';
 
-  constructor(private datasetService: DatasetService) {}
+  // Credentials check
+  credentialsConfigured = false;
+  checkingCredentials = true;
+
+  // Loading states
+  isUploading = false;
+  isDeletingId: number | null = null;
+
+  constructor(
+    private datasetService: DatasetService,
+    private settingsService: SettingsService
+  ) {}
 
   ngOnInit(): void {
-    this.loadDatasets();
+    this.checkCredentials();
+  }
+
+  checkCredentials(): void {
+    this.checkingCredentials = true;
+    this.settingsService.getCredentialsStatus().subscribe({
+      next: (status) => {
+        this.credentialsConfigured =
+          status.awsConfigured && status.awsValidated;
+        this.checkingCredentials = false;
+
+        if (this.credentialsConfigured) {
+          this.loadDatasets();
+        }
+      },
+      error: (error) => {
+        console.error('Error checking credentials:', error);
+        this.checkingCredentials = false;
+        this.credentialsConfigured = false;
+      }
+    });
   }
 
   loadDatasets(): void {
@@ -88,16 +121,20 @@ export class UploadComponent implements OnInit {
       return;
     }
 
+    this.isUploading = true;
+
     this.datasetService
       .uploadDataset(this.selectedFile!, this.datasetName)
       .subscribe({
         next: (dataset) => {
           console.log('Upload successful:', dataset);
+          this.isUploading = false;
           this.resetForm();
           this.loadDatasets();
         },
         error: (error) => {
           console.error('Upload failed:', error);
+          this.isUploading = false;
           const errorMessage =
             error.error?.message || 'Upload failed. Please try again.';
           alert(`Error: ${errorMessage}`);
@@ -168,13 +205,17 @@ export class UploadComponent implements OnInit {
       return;
     }
 
+    this.isDeletingId = datasetId;
+
     this.datasetService.deleteDataset(datasetId).subscribe({
       next: () => {
         console.log('Dataset deleted successfully');
+        this.isDeletingId = null;
         this.loadDatasets();
       },
       error: (error) => {
         console.error('Failed to delete dataset:', error);
+        this.isDeletingId = null;
         const errorMessage =
           error.error?.message || 'Failed to delete dataset. Please try again.';
         alert(`Error: ${errorMessage}`);

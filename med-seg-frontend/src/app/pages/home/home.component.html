@@ -1,3 +1,24 @@
 <div class="home-page">
   <h1>Welcome to MedSeg Platform</h1>
+  <p class="subtitle">U-Net Medical Image Segmentation</p>
+
+  <div class="features">
+    <div class="feature-card" [routerLink]="['/upload']">
+      <img src="assets/icons/emojis/upload.png" alt="Upload" class="feature-icon" />
+      <h3>Upload Dataset</h3>
+      <p>Upload medical image datasets for training</p>
+    </div>
+
+    <div class="feature-card" [routerLink]="['/train']">
+      <img src="assets/icons/emojis/brain.png" alt="Train" class="feature-icon" />
+      <h3>Train Model</h3>
+      <p>Configure and train U-Net models</p>
+    </div>
+
+    <div class="feature-card" [routerLink]="['/models']">
+      <img src="assets/icons/emojis/chart.png" alt="Models" class="feature-icon" />
+      <h3>My Models</h3>
+      <p>View and manage trained models</p>
+    </div>
+  </div>
 </div>

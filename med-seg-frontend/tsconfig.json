@@ -7,7 +7,8 @@
       "@interfaces/*": ["app/shared/interfaces/*"],
       "@components/*": ["app/components/*"],
       "@shared/*": ["app/shared/*"],
-      "@environments/*": ["environments/*"]
+      "@environments/*": ["environments/*"],
+      "@services/*": ["app/shared/services/*"]
     },
     "outDir": "./dist/out-tsc",
     "strict": true,

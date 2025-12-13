@@ -13,7 +13,9 @@
     "paths": {
       "@datasets/*": ["src/datasets/*"],
       "@shared/*": ["src/shared/*"],
-      "@common/*": ["src/common/*"]
+      "@common/*": ["src/common/*"],
+      "@models/*": ["src/models/*"],
+      "@settings/*": ["src/settings/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

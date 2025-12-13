@@ -1,8 +1,22 @@
 <div class="upload-page">
   <h1>Dataset Upload</h1>
 
+  <!-- Checking Credentials -->
+  <div *ngIf="checkingCredentials" class="loading-state">
+    <div class="spinner"></div>
+    <p>Checking credentials...</p>
+  </div>
+
+  <!-- Credentials Required Guard -->
+  <div *ngIf="!checkingCredentials && !credentialsConfigured" class="credentials-warning">
+    <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-icon" />
+    <h2>AWS Credentials Required</h2>
+    <p>You need to configure your AWS credentials before you can upload datasets.</p>
+    <a routerLink="/settings" class="btn-primary">Go to Settings</a>
+  </div>
+
   <!-- Upload Section -->
-  <div class="upload-section">
+  <div *ngIf="!checkingCredentials && credentialsConfigured" class="upload-section">
     <div class="upload-columns">
       <!-- Left Column: File Upload -->
       <div class="upload-column left-column">
@@ -31,7 +45,7 @@
           (drop)="onDrop($event)"
         >
           <div class="drop-zone-content">
-            <span class="upload-icon">{{ selectedFile ? '✓' : '📤' }}</span>
+            <img [src]="selectedFile ? 'assets/icons/check.svg' : 'assets/icons/emojis/upload.png'" alt="Upload" class="upload-icon" />
             <p class="drop-zone-text" *ngIf="!selectedFile">
               Drag and drop your dataset ZIP file here
             </p>
@@ -55,10 +69,14 @@
         <!-- Upload Button -->
         <button
           class="submit-button"
-          [disabled]="!canUpload()"
+          [disabled]="!canUpload() || isUploading"
           (click)="submitUpload()"
         >
-          Upload Dataset
+          <span *ngIf="!isUploading">Upload Dataset</span>
+          <span *ngIf="isUploading" class="loading-content">
+            <span class="spinner-small"></span>
+            Uploading...
+          </span>
         </button>
       </div>
 
@@ -109,7 +127,7 @@
               (click)="startEdit(dataset.id)"
               title="Rename dataset"
             >
-              ✏️
+              <img src="assets/icons/emojis/edit.png" alt="Edit" />
             </button>
             <button
               *ngIf="editingDatasetId === dataset.id"
@@ -117,7 +135,7 @@
               (click)="saveEdit(dataset.id)"
               title="Save changes"
             >
-              ✓
+              <img src="assets/icons/check.svg" alt="Save" />
             </button>
             <button
               *ngIf="editingDatasetId === dataset.id"
@@ -125,15 +143,18 @@
               (click)="cancelEdit()"
               title="Cancel editing"
             >
-              ✕
+              <img src="assets/icons/x.svg" alt="Cancel" />
             </button>
             <button
               *ngIf="editingDatasetId !== dataset.id"
               class="action-button delete-button"
+              [class.deleting]="isDeletingId === dataset.id"
               (click)="deleteDataset(dataset.id, dataset.name)"
+              [disabled]="isDeletingId === dataset.id"
               title="Delete dataset"
             >
-              🗑️
+              <img *ngIf="isDeletingId !== dataset.id" src="assets/icons/emojis/trash.png" alt="Delete" />
+              <span *ngIf="isDeletingId === dataset.id" class="spinner-small"></span>
             </button>
           </div>
           <span class="dataset-status" [ngClass]="getStatusClass(dataset.status)">

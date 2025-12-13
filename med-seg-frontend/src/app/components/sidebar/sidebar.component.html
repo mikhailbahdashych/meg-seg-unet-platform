@@ -9,7 +9,7 @@
       [routerLinkActiveOptions]="{ exact: true }"
       class="nav-item"
     >
-      <span class="nav-icon">🏠</span>
+      <img src="assets/icons/emojis/home.png" alt="Home" class="nav-icon" />
       <span class="nav-text">Home</span>
     </a>
     <a
@@ -17,8 +17,32 @@
       routerLinkActive="active"
       class="nav-item"
     >
-      <span class="nav-icon">📁</span>
+      <img src="assets/icons/emojis/folder.png" alt="Upload" class="nav-icon" />
       <span class="nav-text">Upload Dataset</span>
+    </a>
+    <a
+      routerLink="/train"
+      routerLinkActive="active"
+      class="nav-item"
+    >
+      <img src="assets/icons/emojis/brain.png" alt="Train" class="nav-icon" />
+      <span class="nav-text">Train Model</span>
+    </a>
+    <a
+      routerLink="/models"
+      routerLinkActive="active"
+      class="nav-item"
+    >
+      <img src="assets/icons/emojis/chart.png" alt="Models" class="nav-icon" />
+      <span class="nav-text">My Models</span>
+    </a>
+    <a
+      routerLink="/settings"
+      routerLinkActive="active"
+      class="nav-item"
+    >
+      <img src="assets/icons/emojis/settings.png" alt="Settings" class="nav-icon" />
+      <span class="nav-text">Settings</span>
     </a>
   </nav>
 </aside>

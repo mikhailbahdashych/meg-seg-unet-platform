@@ -5,8 +5,7 @@
   "scripts": {
     "start:backend": "cd med-seg-backend && npm run start:dev",
     "start:frontend": "cd med-seg-frontend && npm start",
-    "format:backend": "cd med-seg-backend && npm run format",
-    "format:frontend": "cd med-seg-frontend && npm run format"
+    "format": "cd med-seg-backend && npm run format; cd ../med-seg-frontend && npm run format"
   },
   "private": true
 }

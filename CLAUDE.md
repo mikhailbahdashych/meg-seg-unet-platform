@@ -27,9 +27,9 @@ The system consists of three main components:
 
 ### Database Schema
 
-**SQLite tables** (to be implemented):
+**SQLite tables** (schema defined in TypeORM entities):
 - `datasets`: Stores dataset metadata (name, s3_bucket, s3_key, file_count, total_size_mb, status)
-- `models`: Stores model metadata (name, dataset_id, s3_bucket, s3_key, hyperparameters, metrics, status)
+- `models`: Stores model metadata (to be implemented)
 - `inference_results`: Stores inference outputs (optional)
 
 ## Development Commands
@@ -66,11 +66,17 @@ npm run format             # Format with Prettier + ESLint
 ## Configuration
 
 ### Backend Environment Variables
+Environment variables are loaded from `.env.development` or `.env.production` based on `NODE_ENV`:
 - `API_PORT`: Backend port (default: 4201)
 - `AWS_ACCESS_KEY_ID`: AWS credentials
 - `AWS_SECRET_ACCESS_KEY`: AWS credentials
-- `AWS_REGION`: AWS region
-- `S3_BUCKET_NAME`: S3 bucket for datasets/models
+- `AWS_REGION`: AWS region (e.g., eu-central-1)
+- `AWS_S3_NAME`: S3 bucket for datasets/models
+- `AWS_S3_BUCKET_URL`: S3 bucket URL
+
+### Frontend Environment
+API URL configured in `src/environments/environment.ts` (dev) and `environment.prod.ts` (prod):
+- Development: `http://localhost:4201/api`
 
 ### CORS Configuration
 Backend allows CORS from: localhost:4200, localhost:4202, localhost:8080, 127.0.0.1:8080, localhost:4000
@@ -78,40 +84,59 @@ Backend allows CORS from: localhost:4200, localhost:4202, localhost:8080, 127.0.
 ### Request Size Limits
 Backend accepts JSON/URL-encoded payloads up to 50mb (configured in `med-seg-backend/src/main.ts:18-19`)
 
-## Key Workflows
-
-### Dataset Upload
-1. User uploads dataset (ZIP with `/images` and `/masks` folders)
-2. Backend validates and uploads to S3
-3. Metadata stored in SQLite
-4. Supported formats: PNG, JPG, DICOM, NIfTI
-
-### Model Training
-1. User selects dataset and configures hyperparameters (epochs, learning rate, batch size)
-2. Backend downloads dataset from S3
-3. Backend spawns Python training script via child process
-4. Python trains U-Net model locally
-5. Trained model uploaded to S3
-6. Metrics and metadata stored in SQLite
-
-### Inference
-1. User uploads image and selects trained model
-2. Backend retrieves model from S3
-3. Backend spawns Python inference script
-4. Segmentation result returned and visualized
-
 ## Code Architecture Notes
 
+### Backend Structure
 - **Monorepo structure**: Two separate npm projects (`med-seg-backend`, `med-seg-frontend`) with root-level convenience scripts
-- **Backend**: Standard NestJS structure with modules, controllers, and services (currently minimal setup)
-- **Frontend**: Angular 17 standalone components architecture
-- **No authentication**: Single-user system for academic purposes
-- **Synchronous operations**: Frontend polls for status updates (no WebSockets)
-- **SQLite**: Chosen for simplicity over PostgreSQL/MySQL
+- **Module organization**: Standard NestJS structure with modules, controllers, and services
+  - `datasets/`: Dataset management (upload, validation, S3 integration)
+  - `shared/`: Shared services (S3Service, FileValidationService, ApiConfigService)
+  - `common/`: Common utilities and exceptions
+- **Path aliases**: Backend uses TypeScript path aliases defined in `tsconfig.json`:
+  - `@datasets/*` → `src/datasets/*`
+  - `@shared/*` → `src/shared/*`
+  - `@common/*` → `src/common/*`
+- **Database**: TypeORM with SQLite (`medseg.db`), synchronize enabled for development
+- **File uploads**: Multer configured to save uploads to `temp/uploads/` directory
+- **S3 Integration**: AWS SDK v3 (`@aws-sdk/client-s3`, `@aws-sdk/lib-storage`)
+
+### Frontend Structure
+- **Angular 17**: Standalone components architecture (no NgModules)
+- **Routing**: Centralized in `app.routes.ts` with LayoutComponent wrapper
+- **Services**: HttpClient-based services in `app/shared/services/`
+- **Pages**: Feature components in `app/pages/`
+- **Components**: Reusable components in `app/components/`
+
+### Key Workflows
+
+#### Dataset Upload Flow
+1. User uploads ZIP file via `POST /api/datasets/upload`
+2. Multer saves file to `temp/uploads/` directory
+3. Backend validates file size and ZIP structure (requires `/images` and `/masks` folders)
+4. Backend validates that image-mask pairs match by filename
+5. Backend uploads validated files to S3 under `datasets/{uuid}/images` and `datasets/{uuid}/masks`
+6. Metadata stored in SQLite `datasets` table
+7. Temp files cleaned up after upload completes or fails
+8. On error, S3 files are cleaned up automatically
+
+#### Dataset Deletion Flow
+1. Delete from S3 via `S3Service.deleteDirectory()`
+2. Delete from SQLite database
+3. S3 deletion errors are logged but don't prevent database deletion
 
 ## Development Guidelines
 
 - Both frontend and backend use Prettier + ESLint for formatting
 - Backend uses Jest for testing, frontend uses Jasmine/Karma
-- TypeScript strict mode enabled
+- TypeScript strict mode is **disabled** in backend (`strictNullChecks: false`, `noImplicitAny: false`)
 - Code must be formatted before commits (use `npm run format`)
+- No authentication: Single-user system for academic purposes
+- Synchronous operations: Frontend polls for status updates (no WebSockets)
+
+## Known Limitations
+
+- SQLite chosen for simplicity over PostgreSQL/MySQL
+- No model training/inference implemented yet (Python scripts pending)
+- No WebSocket support for real-time updates
+- Single-user system (no authentication/authorization)
+- Backend TypeScript strict mode disabled for faster development
