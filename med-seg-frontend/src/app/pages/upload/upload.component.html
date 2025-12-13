@@ -69,10 +69,14 @@
         <!-- Upload Button -->
         <button
           class="submit-button"
-          [disabled]="!canUpload()"
+          [disabled]="!canUpload() || isUploading"
           (click)="submitUpload()"
         >
-          Upload Dataset
+          <span *ngIf="!isUploading">Upload Dataset</span>
+          <span *ngIf="isUploading" class="loading-content">
+            <span class="spinner-small"></span>
+            Uploading...
+          </span>
         </button>
       </div>
 
@@ -144,10 +148,13 @@
             <button
               *ngIf="editingDatasetId !== dataset.id"
               class="action-button delete-button"
+              [class.deleting]="isDeletingId === dataset.id"
               (click)="deleteDataset(dataset.id, dataset.name)"
+              [disabled]="isDeletingId === dataset.id"
               title="Delete dataset"
             >
-              🗑️
+              <span *ngIf="isDeletingId !== dataset.id">🗑️</span>
+              <span *ngIf="isDeletingId === dataset.id" class="spinner-small"></span>
             </button>
           </div>
           <span class="dataset-status" [ngClass]="getStatusClass(dataset.status)">
