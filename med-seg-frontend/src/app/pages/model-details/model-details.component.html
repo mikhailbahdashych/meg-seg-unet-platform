@@ -19,6 +19,13 @@
       >
 <img src="assets/icons/emojis/download.png" alt="Download" class="btn-icon" /> Download Model
       </button>
+      <button
+        class="btn-warning"
+        *ngIf="isActiveStatus(model.status)"
+        (click)="cancelTraining()"
+      >
+<img src="assets/icons/emojis/warning.png" alt="Cancel" class="btn-icon" /> Cancel Training
+      </button>
       <button class="btn-danger" (click)="deleteModel()">
 <img src="assets/icons/emojis/trash.png" alt="Delete" class="btn-icon" /> Delete
       </button>

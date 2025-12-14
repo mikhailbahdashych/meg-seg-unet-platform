@@ -119,6 +119,29 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
+  cancelTraining(): void {
+    if (!this.model) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to cancel training for "${this.model.name}"? The pod will be terminated.`
+      )
+    ) {
+      return;
+    }
+
+    this.modelService.cancelTraining(this.model.id).subscribe({
+      next: (updatedModel) => {
+        this.model = updatedModel;
+        this.stopPolling();
+      },
+      error: (error) => {
+        console.error('Error cancelling training:', error);
+        alert(error.error?.message || 'Failed to cancel training');
+      }
+    });
+  }
+
   deleteModel(): void {
     if (!this.model) return;
 

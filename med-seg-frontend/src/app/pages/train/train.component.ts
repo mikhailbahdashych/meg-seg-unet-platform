@@ -33,12 +33,12 @@ export class TrainComponent implements OnInit {
 
   showAdvancedArchitecture = false;
 
-  // U-Net Architecture - Basic
+  // U-Net Architecture - Basic (Optimized for demo: fast training ~5-10 min)
   architecture = {
-    inputChannels: 3,
+    inputChannels: 1, // Grayscale (Chest X-Rays)
     outputChannels: 1,
-    baseFilters: 64,
-    depth: 4
+    baseFilters: 32, // Smaller model = faster training
+    depth: 3 // Fewer layers = faster training
   };
 
   // U-Net Architecture - Advanced
@@ -56,10 +56,10 @@ export class TrainComponent implements OnInit {
     filterMultiplier: 2
   };
 
-  // Training Hyperparameters
+  // Training Hyperparameters (Optimized for demo: fast training)
   training = {
-    epochs: 50,
-    batchSize: 4,
+    epochs: 20, // Faster convergence on small dataset
+    batchSize: 8, // Better GPU utilization
     learningRate: 0.001,
     optimizer: 'adam' as 'adam' | 'sgd' | 'rmsprop',
     lossFunction: 'dice' as 'dice' | 'bce' | 'focal' | 'combined',

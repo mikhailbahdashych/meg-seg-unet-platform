@@ -322,3 +322,31 @@
     }
   }
 }
+
+// Demo Configuration Info Box
+.demo-defaults {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+
+  p {
+    margin: 0.5rem 0;
+    color: #1565c0;
+    font-size: 0.9rem;
+
+    strong {
+      font-weight: 600;
+    }
+
+    a {
+      color: #1976d2;
+      text-decoration: underline;
+
+      &:hover {
+        color: #1565c0;
+      }
+    }
+  }
+}

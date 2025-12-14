@@ -109,3 +109,6 @@ med-seg-backend/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 med-seg-backend/package-lock.json
 med-seg-backend/test-dataset.zip
+
+med-seg-ml/.venv
+med-seg-ml/*.zip

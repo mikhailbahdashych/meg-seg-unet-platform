@@ -42,6 +42,31 @@
         Failed <span class="count">{{ getModelCount('failed') }}</span>
       </button>
     </div>
+
+    <div class="bulk-actions" *ngIf="!isLoading && filteredModels.length > 0">
+      <button
+        class="btn-secondary"
+        (click)="toggleSelectionMode()"
+        [class.active]="isSelectionMode"
+      >
+        <img src="assets/icons/emojis/checkbox.png" alt="Select" class="btn-icon" />
+        {{ isSelectionMode ? 'Cancel Selection' : 'Select Models' }}
+      </button>
+
+      <div class="selection-controls" *ngIf="isSelectionMode">
+        <button class="btn-link" (click)="selectAll()">Select All</button>
+        <button class="btn-link" (click)="deselectAll()">Deselect All</button>
+        <span class="selection-count">{{ selectedModelIds.size }} selected</span>
+        <button
+          class="btn-danger"
+          (click)="bulkDelete()"
+          [disabled]="selectedModelIds.size === 0"
+        >
+          <img src="assets/icons/emojis/trash.png" alt="Delete" class="btn-icon" />
+          Delete Selected
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Error Message -->
@@ -76,10 +101,22 @@
     <div
       class="model-card"
       *ngFor="let model of filteredModels"
-      (click)="viewModelDetails(model.id)"
+      (click)="isSelectionMode ? toggleModelSelection(model.id, $event) : viewModelDetails(model.id)"
+      [class.selected]="isModelSelected(model.id)"
+      [class.selectable]="isSelectionMode"
     >
       <div class="model-card-header">
-        <h3 class="model-name">{{ model.name }}</h3>
+        <div class="header-left">
+          <input
+            type="checkbox"
+            class="model-checkbox"
+            *ngIf="isSelectionMode"
+            [checked]="isModelSelected(model.id)"
+            (click)="toggleModelSelection(model.id, $event)"
+            (change)="$event.stopPropagation()"
+          />
+          <h3 class="model-name">{{ model.name }}</h3>
+        </div>
         <span class="status-badge" [ngClass]="getStatusClass(model.status)">
           {{ getStatusLabel(model.status) }}
         </span>

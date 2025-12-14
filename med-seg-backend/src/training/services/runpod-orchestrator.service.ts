@@ -46,22 +46,15 @@ export class RunPodOrchestratorService {
         name: `unet-training-${model.id}`
       });
 
-      // 3. Extract SSH connection details
-      const sshPort = pod.runtime?.ports?.find((p: any) => p.privatePort === 22);
-      if (!sshPort) {
-        throw new Error('SSH port not found in pod runtime');
-      }
-
+      // 3. Extract pod ID and machine details
       const podHostId = pod.machine?.podHostId;
       if (!podHostId) {
         throw new Error('Pod host ID not found');
       }
 
-      // 4. Save pod details to model entity
+      // 4. Save initial pod details to model entity
       await this.modelsRepository.update(model.id, {
         runpodPodId: pod.id,
-        runpodHost: sshPort.ip,
-        runpodPort: sshPort.publicPort,
         runpodUsername: 'root',
         runpodGpuType: gpuTypeId
       });
@@ -70,26 +63,55 @@ export class RunPodOrchestratorService {
       this.logger.log('Waiting for pod to be ready...');
       await this.waitForPodReady(pod.id, 300); // 5 minute timeout
 
-      // 6. Create training bundle
-      this.logger.log('Creating training bundle...');
-      const bundlePath = await this.trainingBundleService.createTrainingBundle(
-        model,
-        dataset
+      // 6. Get pod status with SSH connection details (now that it's ready)
+      this.logger.log('Retrieving SSH connection details...');
+      const podStatus = await this.runpodGraphQLService.getPodStatus(pod.id);
+
+      this.logger.debug(
+        `Pod status response: ${JSON.stringify(podStatus, null, 2)}`
       );
 
-      // 7. Upload training bundle via SCP
-      this.logger.log('Uploading training bundle to pod...');
-      await this.podSshService.uploadDirectory(
-        bundlePath,
-        '/workspace/training',
-        sshPort.ip,
-        sshPort.publicPort,
-        'root',
-        podHostId
+      // Check if runtime and ports exist
+      if (!podStatus.runtime) {
+        throw new Error('Pod runtime is null - pod may not be fully started');
+      }
+
+      if (!podStatus.runtime.ports || podStatus.runtime.ports.length === 0) {
+        throw new Error('No ports found in pod runtime');
+      }
+
+      this.logger.log(
+        `Found ${podStatus.runtime.ports.length} port(s) in pod runtime`
       );
 
-      // 8. Connect via SSH and install dependencies
-      this.logger.log('Connecting via SSH to install dependencies...');
+      const sshPort = podStatus.runtime.ports.find((p: any) => p.privatePort === 22);
+
+      if (!sshPort) {
+        this.logger.error(
+          `Available ports: ${JSON.stringify(podStatus.runtime.ports)}`
+        );
+        throw new Error('SSH port (privatePort 22) not found in pod runtime');
+      }
+
+      this.logger.log(
+        `SSH port mapping: ${sshPort.privatePort} -> ${sshPort.publicPort} (${sshPort.ip})`
+      );
+
+      // Validate SSH connection details
+      if (!sshPort.ip || !sshPort.publicPort) {
+        throw new Error(
+          `Invalid SSH connection details: ip=${sshPort.ip}, publicPort=${sshPort.publicPort}`
+        );
+      }
+
+      // 7. Update model with SSH connection details
+      await this.modelsRepository.update(model.id, {
+        runpodHost: sshPort.ip,
+        runpodPort: sshPort.publicPort
+      });
+
+      // 8. Connect via SSH first
+      this.logger.log('Connecting via SSH to setup training environment...');
       const sshConnection = await this.podSshService.connect(
         sshPort.ip,
         sshPort.publicPort,
@@ -97,32 +119,115 @@ export class RunPodOrchestratorService {
         podHostId
       );
 
-      // Install dependencies
-      this.logger.log('Installing Python dependencies...');
-      const installResult = await this.podSshService.executeCommand(
-        'cd /workspace/training && bash install_deps.sh',
+      // 9. Initialize UV project on the pod
+      const projectName = `training-${model.id}`;
+      const remoteProjectDir = `/root/${projectName}`;
+
+      this.logger.log('Initializing UV project on pod...');
+      this.logger.log(`Running: cd /root && uv init ${projectName} --python 3.12`);
+
+      const uvInitResult = await this.podSshService.executeCommand(
+        `cd /root && uv init ${projectName} --python 3.12`,
         sshConnection,
-        600000 // 10 minutes for pip install
+        60000 // 1 minute timeout
       );
+
+      this.logger.log(`UV init completed with exit code: ${uvInitResult.exitCode}`);
+
+      if (uvInitResult.stdout) {
+        this.logger.debug(`UV init stdout: ${uvInitResult.stdout}`);
+      }
+
+      if (uvInitResult.stderr) {
+        this.logger.warn(`UV init stderr: ${uvInitResult.stderr}`);
+      }
+
+      if (uvInitResult.exitCode !== 0) {
+        throw new Error(`UV project initialization failed: ${uvInitResult.stderr}`);
+      }
+
+      // Disconnect before SCP upload
+      await this.podSshService.disconnect(sshConnection);
+
+      // 10. Create training bundle
+      this.logger.log('Creating training bundle...');
+      const bundlePath = await this.trainingBundleService.createTrainingBundle(
+        model,
+        dataset
+      );
+
+      // 11. Upload training files into the UV project directory
+      this.logger.log('Uploading training files to UV project...');
+      await this.podSshService.uploadDirectory(
+        bundlePath,
+        remoteProjectDir,
+        sshPort.ip,
+        sshPort.publicPort,
+        'root',
+        podHostId
+      );
+
+      // 12. Reconnect and install dependencies
+      this.logger.log('Reconnecting via SSH to install dependencies...');
+      const sshConnection2 = await this.podSshService.connect(
+        sshPort.ip,
+        sshPort.publicPort,
+        'root',
+        podHostId
+      );
+
+      // Activate venv and install dependencies with UV
+      this.logger.log('Installing Python dependencies with UV...');
+      const installCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && uv add torch>=2.1.0 torchvision>=0.16.0 numpy>=1.24.0 pillow>=10.0.0 boto3>=1.28.0 albumentations>=1.3.0 tqdm>=4.65.0 matplotlib>=3.7.0 scikit-image>=0.21.0`;
+      this.logger.log(`Running: ${installCommand}`);
+
+      const installResult = await this.podSshService.executeCommand(
+        installCommand,
+        sshConnection2,
+        600000 // 10 minutes for package install
+      );
+
+      this.logger.log(`Install completed with exit code: ${installResult.exitCode}`);
+
+      if (installResult.stdout) {
+        this.logger.debug(`Install stdout: ${installResult.stdout}`);
+      }
+
+      if (installResult.stderr) {
+        this.logger.warn(`Install stderr: ${installResult.stderr}`);
+      }
 
       if (installResult.exitCode !== 0) {
         throw new Error(`Dependency installation failed: ${installResult.stderr}`);
       }
 
-      // 9. Start training in background
+      // 13. Start training in background with virtual environment
       this.logger.log('Starting training script...');
-      await this.podSshService.executeCommand(
-        'cd /workspace/training && nohup python train.py --config config.json --download-from-s3 --output-dir /workspace/output > training.log 2>&1 &',
-        sshConnection,
+      const trainCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && mkdir -p /root/output && nohup python train.py --config config.json --download-from-s3 --output-dir /root/output > training.log 2>&1 &`;
+      this.logger.log(`Running: ${trainCommand}`);
+
+      const trainResult = await this.podSshService.executeCommand(
+        trainCommand,
+        sshConnection2,
         10000 // Short timeout since we're running in background
       );
 
-      // 10. Update status to training
+      this.logger.log(`Training command exit code: ${trainResult.exitCode}`);
+
+      if (trainResult.stdout) {
+        this.logger.debug(`Training stdout: ${trainResult.stdout}`);
+      }
+
+      if (trainResult.stderr) {
+        this.logger.debug(`Training stderr: ${trainResult.stderr}`);
+      }
+
+      // 14. Update status to training
       await this.modelsService.updateStatus(model.id, 'training');
       this.logger.log(`Training started successfully for model ${model.id}`);
 
-      // 11. Cleanup
-      await this.podSshService.disconnect(sshConnection);
+      // 15. Cleanup
+      await this.podSshService.disconnect(sshConnection2);
       await this.trainingBundleService.cleanupBundle(bundlePath);
     } catch (error) {
       this.logger.error(
@@ -153,7 +258,7 @@ export class RunPodOrchestratorService {
 
       // Read training status file
       const statusContent = await this.podSshService.readRemoteFile(
-        '/workspace/output/training_status.json',
+        '/root/output/training_status.json',
         sshConnection
       );
 
@@ -212,7 +317,7 @@ export class RunPodOrchestratorService {
 
       // Read training history for final metrics
       const historyContent = await this.podSshService.readRemoteFile(
-        '/workspace/output/training_history.json',
+        '/root/output/training_history.json',
         sshConnection
       );
       const history = JSON.parse(historyContent);
@@ -220,7 +325,7 @@ export class RunPodOrchestratorService {
 
       // Read training logs
       const logs = await this.podSshService.readRemoteFile(
-        '/workspace/training/training.log',
+        `/root/model-${modelId}/training.log`,
         sshConnection
       );
 
@@ -283,7 +388,7 @@ export class RunPodOrchestratorService {
           );
 
           const logs = await this.podSshService.readRemoteFile(
-            '/workspace/training/training.log',
+            `/root/model-${modelId}/training.log`,
             sshConnection
           );
 
@@ -341,26 +446,52 @@ export class RunPodOrchestratorService {
   ): Promise<void> {
     const startTime = Date.now();
     const timeoutMs = timeoutSeconds * 1000;
+    let checkCount = 0;
+
+    this.logger.log(
+      `Waiting for pod ${podId} to be ready (timeout: ${timeoutSeconds}s)...`
+    );
 
     while (Date.now() - startTime < timeoutMs) {
       try {
+        checkCount++;
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+
+        this.logger.debug(
+          `Pod readiness check #${checkCount} (elapsed: ${elapsedSeconds}s)`
+        );
+
         const podStatus = await this.runpodGraphQLService.getPodStatus(podId);
 
-        if (podStatus.runtime && podStatus.runtime.ports) {
-          this.logger.log(`Pod ${podId} is ready`);
+        this.logger.debug(
+          `Pod status: desiredStatus=${podStatus.desiredStatus}, runtime=${podStatus.runtime ? 'present' : 'null'}, ports=${podStatus.runtime?.ports?.length || 0}`
+        );
+
+        if (
+          podStatus.runtime &&
+          podStatus.runtime.ports &&
+          podStatus.runtime.ports.length > 0
+        ) {
+          const sshPort = podStatus.runtime.ports.find(
+            (p: any) => p.privatePort === 22
+          );
+          this.logger.log(
+            `✅ Pod ${podId} is ready after ${elapsedSeconds}s! SSH available at ${sshPort?.ip}:${sshPort?.publicPort}`
+          );
           return;
         }
 
+        this.logger.debug('Pod not ready yet, waiting 5 seconds...');
         // Wait 5 seconds before next check
         await new Promise((resolve) => setTimeout(resolve, 5000));
       } catch (error) {
-        this.logger.warn(`Pod not ready yet: ${error.message}`);
+        this.logger.warn(`Pod readiness check failed: ${error.message}`);
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
     }
 
     throw new Error(
-      `Pod ${podId} did not become ready within ${timeoutSeconds} seconds`
+      `Pod ${podId} did not become ready within ${timeoutSeconds} seconds (${checkCount} checks)`
     );
   }
 }

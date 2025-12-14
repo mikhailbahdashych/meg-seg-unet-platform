@@ -47,8 +47,20 @@ export class ModelsController {
     return this.modelsService.update(id, updateModelDto);
   }
 
+  @Post(':id/cancel')
+  async cancelTraining(@Param('id') id: number): Promise<Model> {
+    return this.modelsService.cancelTraining(id);
+  }
+
   @Delete(':id')
   async delete(@Param('id') id: number): Promise<void> {
     await this.modelsService.delete(id);
+  }
+
+  @Post('bulk-delete')
+  async bulkDelete(
+    @Body() body: { ids: number[] }
+  ): Promise<{ deleted: number; failed: number[] }> {
+    return this.modelsService.bulkDelete(body.ids);
   }
 }

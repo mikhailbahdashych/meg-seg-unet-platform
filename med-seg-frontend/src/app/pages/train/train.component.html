@@ -24,6 +24,13 @@
   </div>
 
   <div *ngIf="!checkingCredentials && runpodConfigured" class="train-content">
+    <!-- Demo Configuration Info -->
+    <div class="info-box demo-defaults">
+      <p><strong>Demo Configuration Active</strong></p>
+      <p>Default parameters are optimized for fast training (~5-10 minutes) on Chest X-Ray datasets.</p>
+      <p>Recommended dataset: <a href="https://www.kaggle.com/datasets/raddar/tuberculosis-chest-xrays-montgomery" target="_blank">Montgomery County Chest X-Rays</a></p>
+    </div>
+
     <!-- Dataset Selection -->
     <div class="section">
       <h2>Dataset Selection</h2>
