@@ -151,9 +151,6 @@ echo "Setting up Python environment with uv..."
 # Create virtual environment with uv
 uv venv .venv
 
-# Activate virtual environment
-source .venv/bin/activate
-
 echo "Virtual environment activated at .venv"
 `;
 

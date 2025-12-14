@@ -22,7 +22,8 @@ class MedicalImageDataset(Dataset):
         masks_dir: str,
         image_size: Tuple[int, int] = (256, 256),
         transform: Optional[Callable] = None,
-        augment: bool = False
+        augment: bool = False,
+        input_channels: int = 1
     ):
         """
         Args:
@@ -31,11 +32,13 @@ class MedicalImageDataset(Dataset):
             image_size: Target size for resizing (height, width)
             transform: Custom albumentations transform (overrides default)
             augment: Whether to apply data augmentation
+            input_channels: Number of input channels (1 for grayscale, 3 for RGB)
         """
         self.images_dir = Path(images_dir)
         self.masks_dir = Path(masks_dir)
         self.image_size = image_size
         self.augment = augment
+        self.input_channels = input_channels
 
         # Get all image files
         self.image_files = self._get_image_files()
@@ -165,7 +168,12 @@ class MedicalImageDataset(Dataset):
 
     def _load_image(self, path: Path) -> np.ndarray:
         """Load image as numpy array"""
-        image = Image.open(path).convert('RGB')
+        image = Image.open(path)
+        # Convert based on input_channels
+        if self.input_channels == 1:
+            image = image.convert('L')
+        else:
+            image = image.convert('RGB')
         return np.array(image)
 
     def _load_mask(self, path: Path) -> np.ndarray:
@@ -219,7 +227,8 @@ def create_dataloaders(
     validation_split: float = 0.2,
     image_size: Tuple[int, int] = (256, 256),
     num_workers: int = 4,
-    seed: int = 42
+    seed: int = 42,
+    input_channels: int = 1
 ):
     """
     Create training and validation dataloaders.
@@ -232,6 +241,7 @@ def create_dataloaders(
         image_size: Target size for images
         num_workers: Number of worker processes for data loading
         seed: Random seed for reproducibility
+        input_channels: Number of input channels (1 for grayscale, 3 for RGB)
 
     Returns:
         train_loader, val_loader
@@ -243,7 +253,8 @@ def create_dataloaders(
         images_dir=images_dir,
         masks_dir=masks_dir,
         image_size=image_size,
-        augment=True  # Augmentation will only apply to training set
+        augment=True,  # Augmentation will only apply to training set
+        input_channels=input_channels
     )
 
     # Split into train and validation

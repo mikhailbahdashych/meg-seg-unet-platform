@@ -63,7 +63,7 @@ export class RunPodOrchestratorService {
 
       // 5. Wait for pod to be ready
       this.logger.log('Waiting for pod to be ready...');
-      await this.waitForPodReady(pod.id, 300); // 5 minute timeout
+      await this.waitForPodReady(pod.id, 600); // 10 minute timeout (doubled)
 
       // 6. Get pod status with SSH connection details (now that it's ready)
       this.logger.log('Retrieving SSH connection details...');
@@ -131,7 +131,7 @@ export class RunPodOrchestratorService {
       const uvInitResult = await this.podSshService.executeCommand(
         `cd /root && uv init ${projectName} --python 3.12`,
         sshConnection,
-        60000 // 1 minute timeout
+        120000 // 2 minute timeout (doubled)
       );
 
       this.logger.log(`UV init completed with exit code: ${uvInitResult.exitCode}`);
@@ -155,7 +155,7 @@ export class RunPodOrchestratorService {
       const uvVenvResult = await this.podSshService.executeCommand(
         `cd ${remoteProjectDir} && uv venv`,
         sshConnection,
-        60000 // 1 minute timeout
+        120000 // 2 minute timeout (doubled)
       );
 
       this.logger.log(`UV venv completed with exit code: ${uvVenvResult.exitCode}`);
@@ -212,7 +212,7 @@ export class RunPodOrchestratorService {
       const installResult = await this.podSshService.executeCommand(
         installCommand,
         sshConnection2,
-        600000 // 10 minutes for package install
+        1200000 // 20 minutes for package install (doubled)
       );
 
       this.logger.log(`Install completed with exit code: ${installResult.exitCode}`);
@@ -229,26 +229,80 @@ export class RunPodOrchestratorService {
         throw new Error(`Dependency installation failed: ${installResult.stderr}`);
       }
 
-      // 13. Start training in background with virtual environment
-      this.logger.log('Starting training script...');
-      const trainCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && mkdir -p /root/output && nohup python train.py --config config.json --download-from-s3 --output-dir /root/output > training.log 2>&1 &`;
-      this.logger.log(`Running: ${trainCommand}`);
+      // 13. Start training in tmux session
+      this.logger.log('Starting training script in tmux session...');
 
-      const trainResult = await this.podSshService.executeCommand(
-        trainCommand,
+      const tmuxSessionName = `training-${model.id}`;
+
+      // Kill any existing tmux session with the same name
+      const killTmuxCommand = `tmux kill-session -t ${tmuxSessionName} 2>/dev/null || true`;
+      await this.podSshService.executeCommand(
+        killTmuxCommand,
         sshConnection2,
-        10000 // Short timeout since we're running in background
+        10000
       );
 
-      this.logger.log(`Training command exit code: ${trainResult.exitCode}`);
+      // Create the training command
+      const trainingCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && mkdir -p /root/output && python train.py --config config.json --download-from-s3 --output-dir /root/output`;
 
-      if (trainResult.stdout) {
-        this.logger.debug(`Training stdout: ${trainResult.stdout}`);
+      // Start training in a new detached tmux session
+      const tmuxCommand = `tmux new-session -d -s ${tmuxSessionName} '${trainingCommand} > training.log 2>&1; echo "Training finished with exit code: $?" >> training.log'`;
+
+      this.logger.log(`Running in tmux: ${tmuxSessionName}`);
+      this.logger.log(`Command: ${trainingCommand}`);
+
+      const trainResult = await this.podSshService.executeCommand(
+        tmuxCommand,
+        sshConnection2,
+        20000
+      );
+
+      this.logger.log(`Tmux session creation exit code: ${trainResult.exitCode}`);
+
+      if (trainResult.exitCode !== 0) {
+        this.logger.error(`Failed to create tmux session: ${trainResult.stderr}`);
+        throw new Error(`Failed to start training in tmux: ${trainResult.stderr}`);
       }
 
-      if (trainResult.stderr) {
-        this.logger.debug(`Training stderr: ${trainResult.stderr}`);
+      // Give the process a moment to start
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      // Verify tmux session exists
+      const checkTmuxCommand = `tmux ls | grep ${tmuxSessionName} || echo 'NOT_RUNNING'`;
+      const tmuxCheck = await this.podSshService.executeCommand(
+        checkTmuxCommand,
+        sshConnection2,
+        10000
+      );
+
+      this.logger.log(`Tmux session check: ${tmuxCheck.stdout}`);
+
+      if (tmuxCheck.stdout.includes('NOT_RUNNING')) {
+        // Check training.log for errors
+        const logCheckCommand = `cat ${remoteProjectDir}/training.log 2>/dev/null | tail -50 || echo 'No log file yet'`;
+        const logCheck = await this.podSshService.executeCommand(
+          logCheckCommand,
+          sshConnection2,
+          10000
+        );
+        this.logger.error(`Tmux session not running. Log: ${logCheck.stdout}`);
+        throw new Error(
+          `Training tmux session failed to start. Check logs: ${logCheck.stdout}`
+        );
       }
+
+      // Verify Python process is actually running
+      const checkProcessCommand = `tmux capture-pane -t ${tmuxSessionName} -p | tail -5`;
+      const processCheck = await this.podSshService.executeCommand(
+        checkProcessCommand,
+        sshConnection2,
+        10000
+      );
+
+      this.logger.log(`Tmux pane content: ${processCheck.stdout}`);
+      this.logger.log(
+        `Training process verified running in tmux session: ${tmuxSessionName}`
+      );
 
       // 14. Update status to training
       await this.modelsService.updateStatus(model.id, 'training');
@@ -283,6 +337,21 @@ export class RunPodOrchestratorService {
         model.runpodUsername || 'root',
         model.runpodPodId
       );
+
+      // Check if training status file exists
+      const checkFileResult = await this.podSshService.executeCommand(
+        'test -f /root/output/training_status.json && echo "exists" || echo "not_found"',
+        sshConnection,
+        5000
+      );
+
+      if (checkFileResult.stdout.trim() === 'not_found') {
+        this.logger.debug(
+          `Training status file not yet created for model ${modelId}, training may still be initializing`
+        );
+        await this.podSshService.disconnect(sshConnection);
+        return null;
+      }
 
       // Read training status file
       const statusContent = await this.podSshService.readRemoteFile(
@@ -343,32 +412,60 @@ export class RunPodOrchestratorService {
         model.runpodPodId!
       );
 
-      // Read training history for final metrics
-      const historyContent = await this.podSshService.readRemoteFile(
-        '/root/output/training_history.json',
-        sshConnection
+      // Check if training history file exists
+      const checkHistoryResult = await this.podSshService.executeCommand(
+        'test -f /root/output/training_history.json && echo "exists" || echo "not_found"',
+        sshConnection,
+        5000
       );
-      const history = JSON.parse(historyContent);
-      const finalMetrics = history.history[history.history.length - 1];
+
+      let finalMetrics = null;
+      if (checkHistoryResult.stdout.trim() === 'exists') {
+        // Read training history for final metrics
+        const historyContent = await this.podSshService.readRemoteFile(
+          '/root/output/training_history.json',
+          sshConnection
+        );
+        const history = JSON.parse(historyContent);
+        finalMetrics = history.history[history.history.length - 1];
+      } else {
+        this.logger.warn(
+          `Training history file not found for model ${modelId}, skipping final metrics`
+        );
+      }
 
       // Read training logs
-      const logs = await this.podSshService.readRemoteFile(
-        `/root/model-${modelId}/training.log`,
-        sshConnection
+      let logs = '';
+      const checkLogsResult = await this.podSshService.executeCommand(
+        `test -f /root/model-${modelId}/training.log && echo "exists" || echo "not_found"`,
+        sshConnection,
+        5000
       );
+
+      if (checkLogsResult.stdout.trim() === 'exists') {
+        logs = await this.podSshService.readRemoteFile(
+          `/root/model-${modelId}/training.log`,
+          sshConnection
+        );
+      } else {
+        this.logger.warn(`Training logs not found for model ${modelId}`);
+      }
 
       // Disconnect
       await this.podSshService.disconnect(sshConnection);
 
       // Wait a bit for S3 upload to complete (training script uploads the model)
-      await new Promise((resolve) => setTimeout(resolve, 10000)); // 10 seconds
+      await new Promise((resolve) => setTimeout(resolve, 20000)); // 20 seconds (doubled)
 
       // Update model with final metrics
       const updateData: any = {
-        finalLoss: finalMetrics.val_loss,
-        finalDiceScore: finalMetrics.dice_score,
-        trainingLogs: logs.substring(Math.max(0, logs.length - 10000)) // Last 10KB
+        trainingLogs: logs ? logs.substring(Math.max(0, logs.length - 10000)) : '' // Last 10KB
       };
+
+      if (finalMetrics) {
+        updateData.finalLoss = finalMetrics.val_loss;
+        updateData.finalDiceScore = finalMetrics.dice_score;
+      }
 
       // Calculate training duration
       if (model.startedAt) {

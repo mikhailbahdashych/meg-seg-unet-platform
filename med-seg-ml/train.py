@@ -74,7 +74,7 @@ class ModelTrainer:
         paginator = self.s3_client.get_paginator('list_objects_v2')
 
         for folder, local_dir in [('images', images_dir), ('masks', masks_dir)]:
-            prefix = f"{s3_key_prefix}{folder}/"
+            prefix = f"{s3_key_prefix}/{folder}/"
             print(f"Downloading {folder}...")
 
             file_count = 0
@@ -187,7 +187,8 @@ class ModelTrainer:
             validation_split=hyperparams.get('validation_split', 0.2),
             image_size=(256, 256),
             num_workers=2,
-            seed=42
+            seed=42,
+            input_channels=hyperparams.get('input_channels', 1)
         )
 
     def train_epoch(self, epoch: int) -> float:

@@ -76,7 +76,7 @@ export class PodSshService {
             port,
             username,
             privateKey,
-            readyTimeout: 30000,
+            readyTimeout: 60000, // 60 seconds (doubled)
             keepaliveInterval: 10000
           });
         });
@@ -125,7 +125,7 @@ export class PodSshService {
       const result = execSync(scpCommand, {
         encoding: 'utf8',
         stdio: 'pipe',
-        timeout: 300000 // 5 minute timeout
+        timeout: 600000 // 10 minute timeout (doubled)
       });
 
       this.logger.log('Directory upload completed successfully');
@@ -147,7 +147,7 @@ export class PodSshService {
   async executeCommand(
     command: string,
     connection: SSH2Client,
-    timeout: number = 300000 // 5 minutes default
+    timeout: number = 600000 // 10 minutes default (doubled)
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     this.logger.log(`Executing command: ${command}`);
 
