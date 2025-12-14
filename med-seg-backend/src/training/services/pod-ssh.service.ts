@@ -151,6 +151,11 @@ export class PodSshService {
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     this.logger.log(`Executing command: ${command}`);
 
+    // Wrap command in bash login shell to ensure PATH is set correctly
+    // This ensures UV and other tools are available
+    const wrappedCommand = `/bin/bash -l -c '${command.replace(/'/g, "'\\''")}'`;
+    this.logger.debug(`Wrapped command: ${wrappedCommand}`);
+
     return new Promise((resolve, reject) => {
       let stdout = '';
       let stderr = '';
@@ -160,7 +165,7 @@ export class PodSshService {
         reject(new Error(`Command execution timed out after ${timeout}ms`));
       }, timeout);
 
-      connection.exec(command, (err, stream: ClientChannel) => {
+      connection.exec(wrappedCommand, (err, stream: ClientChannel) => {
         if (err) {
           clearTimeout(timeoutHandle);
           reject(err);

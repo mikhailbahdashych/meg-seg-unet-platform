@@ -146,6 +146,32 @@ export class RunPodOrchestratorService {
         throw new Error(`UV project initialization failed: ${uvInitResult.stderr}`);
       }
 
+      // 9.5. Create virtual environment
+      this.logger.log('Creating virtual environment...');
+      this.logger.log(`Running: cd ${remoteProjectDir} && uv venv`);
+
+      const uvVenvResult = await this.podSshService.executeCommand(
+        `cd ${remoteProjectDir} && uv venv`,
+        sshConnection,
+        60000 // 1 minute timeout
+      );
+
+      this.logger.log(`UV venv completed with exit code: ${uvVenvResult.exitCode}`);
+
+      if (uvVenvResult.stdout) {
+        this.logger.debug(`UV venv stdout: ${uvVenvResult.stdout}`);
+      }
+
+      if (uvVenvResult.stderr) {
+        this.logger.warn(`UV venv stderr: ${uvVenvResult.stderr}`);
+      }
+
+      if (uvVenvResult.exitCode !== 0) {
+        throw new Error(
+          `Virtual environment creation failed: ${uvVenvResult.stderr}`
+        );
+      }
+
       // Disconnect before SCP upload
       await this.podSshService.disconnect(sshConnection);
 
@@ -476,7 +502,7 @@ export class RunPodOrchestratorService {
             (p: any) => p.privatePort === 22
           );
           this.logger.log(
-            `✅ Pod ${podId} is ready after ${elapsedSeconds}s! SSH available at ${sshPort?.ip}:${sshPort?.publicPort}`
+            `Pod ${podId} is ready after ${elapsedSeconds}s! SSH available at ${sshPort?.ip}:${sshPort?.publicPort}`
           );
           return;
         }

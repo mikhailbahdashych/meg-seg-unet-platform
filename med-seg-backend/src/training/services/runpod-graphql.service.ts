@@ -116,8 +116,7 @@ export class RunPodGraphQLService {
         gpuTypeId: input.gpuTypeId,
         name: input.name,
         imageName:
-          input.imageName ||
-          'runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04', // Updated to 2.4.0
+          input.imageName || 'runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404',
         dockerArgs: '',
         ports: '22/tcp',
         volumeMountPath: '/workspace',
