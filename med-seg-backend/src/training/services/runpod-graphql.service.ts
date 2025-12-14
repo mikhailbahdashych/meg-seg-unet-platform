@@ -241,6 +241,11 @@ export class RunPodGraphQLService {
       await this.client!.request(mutation, { podId });
       this.logger.log(`Pod terminated: ${podId}`);
     } catch (error) {
+      // If pod is already terminated or not found, don't throw an error
+      if (error.message && error.message.includes('pod not found')) {
+        this.logger.warn(`Pod ${podId} already terminated or not found, ignoring`);
+        return;
+      }
       this.logger.error(`Error terminating pod: ${error.message}`, error.stack);
       throw new Error(`Failed to terminate pod: ${error.message}`);
     }

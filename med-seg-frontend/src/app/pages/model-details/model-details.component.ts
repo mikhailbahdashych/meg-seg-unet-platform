@@ -1,8 +1,17 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ElementRef,
+  ViewChild
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ModelService } from '@services/model.service';
 import { Model } from '@interfaces/model.interface';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-model-details',
@@ -17,6 +26,12 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
   errorMessage = '';
   pollingInterval: any;
   trainingStatus: any = null;
+  trainingHistory: any = null;
+  lossChart: Chart | null = null;
+  diceChart: Chart | null = null;
+
+  @ViewChild('lossChartCanvas') lossChartCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('diceChartCanvas') diceChartCanvas!: ElementRef<HTMLCanvasElement>;
 
   constructor(
     private route: ActivatedRoute,
@@ -33,6 +48,18 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.destroyCharts();
+  }
+
+  destroyCharts(): void {
+    if (this.lossChart) {
+      this.lossChart.destroy();
+      this.lossChart = null;
+    }
+    if (this.diceChart) {
+      this.diceChart.destroy();
+      this.diceChart = null;
+    }
   }
 
   loadModel(id: number): void {
@@ -50,6 +77,11 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
         } else {
           this.stopPolling();
         }
+
+        // Load training history if model is completed
+        if (model.status === 'completed') {
+          this.loadTrainingHistory(id);
+        }
       },
       error: (error) => {
         console.error('Error loading model:', error);
@@ -57,6 +89,138 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  loadTrainingHistory(id: number): void {
+    this.modelService.getTrainingHistory(id).subscribe({
+      next: (history) => {
+        this.trainingHistory = history;
+        setTimeout(() => this.renderCharts(), 100);
+      },
+      error: (error) => {
+        console.error('Error loading training history:', error);
+      }
+    });
+  }
+
+  renderCharts(): void {
+    if (!this.trainingHistory || !this.trainingHistory.history) {
+      return;
+    }
+
+    const history = this.trainingHistory.history;
+    const epochs = history.map((h: any) => h.epoch);
+    const trainLoss = history.map((h: any) => h.train_loss);
+    const valLoss = history.map((h: any) => h.val_loss);
+    const diceScore = history.map((h: any) => h.dice_score);
+
+    // Destroy existing charts
+    this.destroyCharts();
+
+    // Render Loss Chart
+    if (this.lossChartCanvas && this.lossChartCanvas.nativeElement) {
+      this.lossChart = new Chart(this.lossChartCanvas.nativeElement, {
+        type: 'line',
+        data: {
+          labels: epochs,
+          datasets: [
+            {
+              label: 'Training Loss',
+              data: trainLoss,
+              borderColor: '#3f51b5',
+              backgroundColor: 'rgba(63, 81, 181, 0.1)',
+              tension: 0.4,
+              fill: true
+            },
+            {
+              label: 'Validation Loss',
+              data: valLoss,
+              borderColor: '#ff5722',
+              backgroundColor: 'rgba(255, 87, 34, 0.1)',
+              tension: 0.4,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Training and Validation Loss'
+            },
+            legend: {
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Epoch'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Loss'
+              },
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    // Render Dice Score Chart
+    if (this.diceChartCanvas && this.diceChartCanvas.nativeElement) {
+      this.diceChart = new Chart(this.diceChartCanvas.nativeElement, {
+        type: 'line',
+        data: {
+          labels: epochs,
+          datasets: [
+            {
+              label: 'Dice Score',
+              data: diceScore,
+              borderColor: '#4caf50',
+              backgroundColor: 'rgba(76, 175, 80, 0.1)',
+              tension: 0.4,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Dice Score Over Epochs'
+            },
+            legend: {
+              position: 'top'
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Epoch'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Dice Score'
+              },
+              beginAtZero: false,
+              max: 1.0
+            }
+          }
+        }
+      });
+    }
   }
 
   startPolling(): void {

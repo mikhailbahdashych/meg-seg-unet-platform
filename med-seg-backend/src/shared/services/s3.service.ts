@@ -186,6 +186,29 @@ export class S3Service {
     }
   }
 
+  async downloadFileAsString(s3Key: string): Promise<string> {
+    await this.ensureInitialized();
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName!,
+        Key: s3Key
+      });
+
+      const response = await this.s3Client!.send(command);
+      const stream = response.Body;
+
+      // Convert stream to string
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as any) {
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks).toString('utf-8');
+    } catch (error) {
+      throw new UploadException(`Failed to download file from S3: ${error.message}`);
+    }
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
       await this.ensureInitialized();

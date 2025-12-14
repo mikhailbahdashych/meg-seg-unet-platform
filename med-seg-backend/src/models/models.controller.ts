@@ -39,6 +39,11 @@ export class ModelsController {
     return { url };
   }
 
+  @Get(':id/training-history')
+  async getTrainingHistory(@Param('id') id: number): Promise<any> {
+    return this.modelsService.getTrainingHistory(id);
+  }
+
   @Put(':id')
   async update(
     @Param('id') id: number,

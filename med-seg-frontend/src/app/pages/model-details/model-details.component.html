@@ -289,6 +289,19 @@
         </div>
       </div>
     </div>
+
+    <!-- Training History Charts -->
+    <div class="card training-history-card" *ngIf="model && model.status === 'completed' && trainingHistory">
+      <h2>Training History</h2>
+      <div class="charts-container">
+        <div class="chart-wrapper">
+          <canvas #lossChartCanvas></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #diceChartCanvas></canvas>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

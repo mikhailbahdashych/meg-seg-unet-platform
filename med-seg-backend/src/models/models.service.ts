@@ -191,6 +191,26 @@ export class ModelsService {
     return url;
   }
 
+  async getTrainingHistory(id: number): Promise<any> {
+    const model = await this.findOne(id);
+
+    if (model.status !== 'completed') {
+      throw new BadRequestException('Model training is not completed yet');
+    }
+
+    // Training history is stored alongside the model with _history.json suffix
+    const historyS3Key = model.s3Key.replace('.pth', '_history.json');
+
+    try {
+      // Download training history JSON from S3
+      const historyData = await this.s3Service.downloadFileAsString(historyS3Key);
+      return JSON.parse(historyData);
+    } catch (error) {
+      console.error(`Error fetching training history for model ${id}:`, error);
+      throw new NotFoundException('Training history not found');
+    }
+  }
+
   async cancelTraining(id: number): Promise<Model> {
     const model = await this.findOne(id);
 

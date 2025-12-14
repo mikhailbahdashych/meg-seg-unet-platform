@@ -229,80 +229,88 @@ export class RunPodOrchestratorService {
         throw new Error(`Dependency installation failed: ${installResult.stderr}`);
       }
 
-      // 13. Start training in tmux session
-      this.logger.log('Starting training script in tmux session...');
+      // 13. Start training in background
+      this.logger.log('Starting training script...');
 
-      const tmuxSessionName = `training-${model.id}`;
+      // Create output directory
+      const mkdirCommand = `mkdir -p /root/output`;
+      await this.podSshService.executeCommand(mkdirCommand, sshConnection2, 10000);
 
-      // Kill any existing tmux session with the same name
-      const killTmuxCommand = `tmux kill-session -t ${tmuxSessionName} 2>/dev/null || true`;
+      // Write initial status file so monitoring knows training is starting
+      const initialStatusCommand = `cat > /root/output/training_status.json << 'EOF'
+{
+  "status": "initializing",
+  "timestamp": "$(date -Iseconds)",
+  "current_epoch": 0,
+  "total_epochs": ${model.epochs}
+}
+EOF`;
       await this.podSshService.executeCommand(
-        killTmuxCommand,
+        initialStatusCommand,
         sshConnection2,
         10000
       );
 
-      // Create the training command
-      const trainingCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && mkdir -p /root/output && python train.py --config config.json --download-from-s3 --output-dir /root/output`;
+      // Create training command
+      const trainingCommand = `cd ${remoteProjectDir} && source .venv/bin/activate && python train.py --config config.json --download-from-s3 --output-dir /root/output`;
 
-      // Start training in a new detached tmux session
-      const tmuxCommand = `tmux new-session -d -s ${tmuxSessionName} '${trainingCommand} > training.log 2>&1; echo "Training finished with exit code: $?" >> training.log'`;
+      // Start training with nohup, redirecting to log file
+      // Use bash -c to ensure proper shell execution and disown to detach from shell
+      const startCommand = `nohup bash -c '${trainingCommand}' > /root/output/training.log 2>&1 </dev/null & disown`;
 
-      this.logger.log(`Running in tmux: ${tmuxSessionName}`);
-      this.logger.log(`Command: ${trainingCommand}`);
+      this.logger.log(`Starting training with command: ${startCommand}`);
 
       const trainResult = await this.podSshService.executeCommand(
-        tmuxCommand,
+        startCommand,
         sshConnection2,
         20000
       );
 
-      this.logger.log(`Tmux session creation exit code: ${trainResult.exitCode}`);
+      this.logger.log(`Training start command exit code: ${trainResult.exitCode}`);
 
       if (trainResult.exitCode !== 0) {
-        this.logger.error(`Failed to create tmux session: ${trainResult.stderr}`);
-        throw new Error(`Failed to start training in tmux: ${trainResult.stderr}`);
+        this.logger.error(`Failed to start training: ${trainResult.stderr}`);
+        throw new Error(`Failed to start training: ${trainResult.stderr}`);
       }
 
       // Give the process a moment to start
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // Verify tmux session exists
-      const checkTmuxCommand = `tmux ls | grep ${tmuxSessionName} || echo 'NOT_RUNNING'`;
-      const tmuxCheck = await this.podSshService.executeCommand(
-        checkTmuxCommand,
+      // Check if training_status.json has been updated (means Python started)
+      const checkStatusCommand = `cat /root/output/training_status.json 2>/dev/null || echo '{}'`;
+      const statusCheck = await this.podSshService.executeCommand(
+        checkStatusCommand,
         sshConnection2,
         10000
       );
 
-      this.logger.log(`Tmux session check: ${tmuxCheck.stdout}`);
+      this.logger.log(`Initial status file: ${statusCheck.stdout}`);
 
-      if (tmuxCheck.stdout.includes('NOT_RUNNING')) {
-        // Check training.log for errors
-        const logCheckCommand = `cat ${remoteProjectDir}/training.log 2>/dev/null | tail -50 || echo 'No log file yet'`;
+      // Check if Python process is running
+      const checkPythonCommand = `ps aux | grep 'python train.py' | grep -v grep || echo 'NOT_RUNNING'`;
+      const pythonCheck = await this.podSshService.executeCommand(
+        checkPythonCommand,
+        sshConnection2,
+        10000
+      );
+
+      this.logger.log(`Python process check: ${pythonCheck.stdout}`);
+
+      if (pythonCheck.stdout.includes('NOT_RUNNING')) {
+        // Read the log to see what happened
+        const logCheckCommand = `cat /root/output/training.log 2>/dev/null | tail -100 || echo 'No log file'`;
         const logCheck = await this.podSshService.executeCommand(
           logCheckCommand,
           sshConnection2,
           10000
         );
-        this.logger.error(`Tmux session not running. Log: ${logCheck.stdout}`);
+        this.logger.error(`Training process not running. Log: ${logCheck.stdout}`);
         throw new Error(
-          `Training tmux session failed to start. Check logs: ${logCheck.stdout}`
+          `Training process failed to start. Check logs: ${logCheck.stdout}`
         );
       }
 
-      // Verify Python process is actually running
-      const checkProcessCommand = `tmux capture-pane -t ${tmuxSessionName} -p | tail -5`;
-      const processCheck = await this.podSshService.executeCommand(
-        checkProcessCommand,
-        sshConnection2,
-        10000
-      );
-
-      this.logger.log(`Tmux pane content: ${processCheck.stdout}`);
-      this.logger.log(
-        `Training process verified running in tmux session: ${tmuxSessionName}`
-      );
+      this.logger.log('Training process verified running');
 
       // 14. Update status to training
       await this.modelsService.updateStatus(model.id, 'training');
@@ -361,13 +369,22 @@ export class RunPodOrchestratorService {
 
       const status = JSON.parse(statusContent);
 
-      // Update model with current metrics
-      await this.modelsRepository.update(modelId, {
-        currentEpoch: status.current_epoch,
-        currentLoss: status.current_loss,
-        currentDiceScore: status.current_dice_score,
-        progressPercent: status.progress_percent
-      });
+      // Update model with current metrics (only if training is in progress)
+      if (status.status === 'training') {
+        const updateFields: any = {};
+        if (status.current_epoch !== undefined)
+          updateFields.currentEpoch = status.current_epoch;
+        if (status.current_loss !== undefined)
+          updateFields.currentLoss = status.current_loss;
+        if (status.current_dice_score !== undefined)
+          updateFields.currentDiceScore = status.current_dice_score;
+        if (status.progress_percent !== undefined)
+          updateFields.progressPercent = status.progress_percent;
+
+        if (Object.keys(updateFields).length > 0) {
+          await this.modelsRepository.update(modelId, updateFields);
+        }
+      }
 
       await this.podSshService.disconnect(sshConnection);
 
@@ -381,7 +398,16 @@ export class RunPodOrchestratorService {
         );
       }
 
-      return status;
+      // Convert snake_case to camelCase for frontend
+      return {
+        status: status.status,
+        currentEpoch: status.current_epoch,
+        totalEpochs: status.total_epochs,
+        progressPercent: status.progress_percent,
+        currentLoss: status.current_loss,
+        currentDiceScore: status.current_dice_score,
+        timestamp: status.timestamp
+      };
     } catch (error) {
       this.logger.error(
         `Error monitoring training for model ${modelId}: ${error.message}`
@@ -400,6 +426,14 @@ export class RunPodOrchestratorService {
       throw new Error(`Model ${modelId} not found`);
     }
 
+    // Check if already in a final state (avoid duplicate processing)
+    if (['completed', 'failed', 'cancelled', 'uploading'].includes(model.status)) {
+      this.logger.log(
+        `Model ${modelId} already in final state: ${model.status}, skipping completion handler`
+      );
+      return;
+    }
+
     try {
       // Update status to uploading
       await this.modelsService.updateStatus(modelId, 'uploading');
@@ -412,39 +446,48 @@ export class RunPodOrchestratorService {
         model.runpodPodId!
       );
 
-      // Check if training history file exists
-      const checkHistoryResult = await this.podSshService.executeCommand(
-        'test -f /root/output/training_history.json && echo "exists" || echo "not_found"',
+      // Read final metrics from training_status.json
+      let finalMetrics = null;
+      const checkStatusResult = await this.podSshService.executeCommand(
+        'test -f /root/output/training_status.json && echo "exists" || echo "not_found"',
         sshConnection,
         5000
       );
 
-      let finalMetrics = null;
-      if (checkHistoryResult.stdout.trim() === 'exists') {
-        // Read training history for final metrics
-        const historyContent = await this.podSshService.readRemoteFile(
-          '/root/output/training_history.json',
+      if (checkStatusResult.stdout.trim() === 'exists') {
+        const statusContent = await this.podSshService.readRemoteFile(
+          '/root/output/training_status.json',
           sshConnection
         );
-        const history = JSON.parse(historyContent);
-        finalMetrics = history.history[history.history.length - 1];
+        const statusData = JSON.parse(statusContent);
+
+        // Extract final metrics from status file
+        if (
+          statusData.final_loss !== undefined ||
+          statusData.final_dice_score !== undefined
+        ) {
+          finalMetrics = {
+            val_loss: statusData.final_loss,
+            dice_score: statusData.final_dice_score
+          };
+        }
       } else {
         this.logger.warn(
-          `Training history file not found for model ${modelId}, skipping final metrics`
+          `Training status file not found for model ${modelId}, skipping final metrics`
         );
       }
 
       // Read training logs
       let logs = '';
       const checkLogsResult = await this.podSshService.executeCommand(
-        `test -f /root/model-${modelId}/training.log && echo "exists" || echo "not_found"`,
+        `test -f /root/output/training.log && echo "exists" || echo "not_found"`,
         sshConnection,
         5000
       );
 
       if (checkLogsResult.stdout.trim() === 'exists') {
         logs = await this.podSshService.readRemoteFile(
-          `/root/model-${modelId}/training.log`,
+          `/root/output/training.log`,
           sshConnection
         );
       } else {
@@ -458,13 +501,20 @@ export class RunPodOrchestratorService {
       await new Promise((resolve) => setTimeout(resolve, 20000)); // 20 seconds (doubled)
 
       // Update model with final metrics
-      const updateData: any = {
-        trainingLogs: logs ? logs.substring(Math.max(0, logs.length - 10000)) : '' // Last 10KB
-      };
+      const updateData: any = {};
+
+      // Only add fields that have values
+      if (logs) {
+        updateData.trainingLogs = logs.substring(Math.max(0, logs.length - 10000)); // Last 10KB
+      }
 
       if (finalMetrics) {
-        updateData.finalLoss = finalMetrics.val_loss;
-        updateData.finalDiceScore = finalMetrics.dice_score;
+        if (finalMetrics.val_loss !== undefined) {
+          updateData.finalLoss = finalMetrics.val_loss;
+        }
+        if (finalMetrics.dice_score !== undefined) {
+          updateData.finalDiceScore = finalMetrics.dice_score;
+        }
       }
 
       // Calculate training duration
@@ -475,7 +525,10 @@ export class RunPodOrchestratorService {
         updateData.trainingDurationSeconds = durationSeconds;
       }
 
-      await this.modelsRepository.update(modelId, updateData);
+      // Only update if we have data to update
+      if (Object.keys(updateData).length > 0) {
+        await this.modelsRepository.update(modelId, updateData);
+      }
 
       // Update status to completed
       await this.modelsService.updateStatus(modelId, 'completed');

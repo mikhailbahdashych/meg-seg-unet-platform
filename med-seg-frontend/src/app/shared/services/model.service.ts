@@ -36,6 +36,10 @@ export class ModelService {
     return this.http.get<{ url: string }>(`${this.apiUrl}/${id}/download`);
   }
 
+  getTrainingHistory(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${id}/training-history`);
+  }
+
   cancelTraining(id: number): Observable<Model> {
     return this.http.post<Model>(`${this.apiUrl}/${id}/cancel`, {});
   }
