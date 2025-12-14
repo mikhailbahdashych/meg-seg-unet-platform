@@ -7,6 +7,7 @@ import { ModelService } from '@services/model.service';
 import { SettingsService } from '@services/settings.service';
 import { TrainingService, GpuType } from '@services/training.service';
 import { Dataset } from '@interfaces/dataset.interface';
+import { Template } from '@interfaces/template.interface';
 
 @Component({
   selector: 'app-train',
@@ -30,6 +31,18 @@ export class TrainComponent implements OnInit {
   gpuTypes: GpuType[] = [];
   selectedGpuType: string = '';
   loadingGpuTypes = false;
+
+  // Template Selection
+  templates: Template[] = [];
+  selectedTemplate: Template | null = null;
+  loadingTemplates = false;
+
+  // Template Filters
+  templateFilters = {
+    includeRunpodTemplates: true,
+    includePublicTemplates: false,
+    includeEndpointBoundTemplates: false
+  };
 
   showAdvancedArchitecture = false;
 
@@ -77,6 +90,7 @@ export class TrainComponent implements OnInit {
   ngOnInit(): void {
     this.checkCredentials();
     this.loadGpuTypes();
+    this.loadTemplates();
   }
 
   checkCredentials(): void {
@@ -129,6 +143,38 @@ export class TrainComponent implements OnInit {
     });
   }
 
+  loadTemplates(): void {
+    this.loadingTemplates = true;
+    this.trainingService
+      .getTemplates(
+        this.templateFilters.includeRunpodTemplates,
+        this.templateFilters.includePublicTemplates,
+        this.templateFilters.includeEndpointBoundTemplates
+      )
+      .subscribe({
+        next: (templates) => {
+          this.templates = templates;
+          // Pre-select first template if available
+          if (templates.length > 0) {
+            this.selectedTemplate = templates[0];
+          }
+          this.loadingTemplates = false;
+        },
+        error: (error) => {
+          console.error('Error loading templates:', error);
+          this.loadingTemplates = false;
+        }
+      });
+  }
+
+  onTemplateFilterChange(): void {
+    this.loadTemplates();
+  }
+
+  compareTemplates(t1: Template | null, t2: Template | null): boolean {
+    return t1?.id === t2?.id;
+  }
+
   canStartTraining(): boolean {
     return (
       this.selectedDatasetId !== null &&
@@ -150,6 +196,8 @@ export class TrainComponent implements OnInit {
       name: this.modelName.trim(),
       datasetId: this.selectedDatasetId,
       gpuTypeId: this.selectedGpuType,
+      // Template selection
+      templateImageName: this.selectedTemplate?.imageName,
       // Basic architecture
       inputChannels: this.architecture.inputChannels,
       outputChannels: this.architecture.outputChannels,

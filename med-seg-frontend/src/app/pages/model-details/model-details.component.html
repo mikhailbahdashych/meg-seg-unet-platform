@@ -170,6 +170,14 @@
     <div class="card">
       <h2>Training Configuration</h2>
       <div class="info-grid">
+        <div class="info-item" *ngIf="model.runpodGpuType">
+          <span class="label">GPU Type</span>
+          <span class="value">{{ model.runpodGpuType }}</span>
+        </div>
+        <div class="info-item" *ngIf="model.runpodTemplateImage">
+          <span class="label">Docker Template</span>
+          <span class="value">{{ model.runpodTemplateImage }}</span>
+        </div>
         <div class="info-item">
           <span class="label">Epochs</span>
           <span class="value">{{ model.epochs }}</span>

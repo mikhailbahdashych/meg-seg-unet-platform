@@ -94,6 +94,71 @@
       <div *ngIf="!loadingGpuTypes && gpuTypes.length === 0" class="warning-message">
         <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-inline" /> No GPUs currently available. Please try again later.
       </div>
+
+      <!-- Template Selection -->
+      <div class="form-group">
+        <label>Template Sources</label>
+        <div class="checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="templateFilters.includeRunpodTemplates"
+              (change)="onTemplateFilterChange()"
+              [disabled]="isSubmitting"
+            />
+            Include RunPod Templates (Recommended)
+          </label>
+        </div>
+        <div class="checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="templateFilters.includePublicTemplates"
+              (change)="onTemplateFilterChange()"
+              [disabled]="isSubmitting"
+            />
+            Include Public Templates
+          </label>
+        </div>
+        <div class="checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              [(ngModel)]="templateFilters.includeEndpointBoundTemplates"
+              (change)="onTemplateFilterChange()"
+              [disabled]="isSubmitting"
+            />
+            Include Endpoint Bound Templates
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="loadingTemplates" class="loading-state">
+        <span class="spinner"></span>
+        <span>Loading templates...</span>
+      </div>
+
+      <div *ngIf="!loadingTemplates && templates.length > 0" class="form-group">
+        <label for="template">Docker Template *</label>
+        <select
+          id="template"
+          [(ngModel)]="selectedTemplate"
+          [disabled]="isSubmitting"
+          [compareWith]="compareTemplates"
+        >
+          <option [ngValue]="null" disabled>Choose a template...</option>
+          <option *ngFor="let template of templates" [ngValue]="template">
+            {{ template.name }} ({{ template.imageName }})
+          </option>
+        </select>
+        <p class="help-text">
+          Select a Docker template. Ensures UV and GPU compatibility.
+        </p>
+      </div>
+
+      <div *ngIf="!loadingTemplates && templates.length === 0" class="warning-message">
+        <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-inline" /> No templates available. Select at least one template source above.
+      </div>
     </div>
 
     <!-- U-Net Architecture -->

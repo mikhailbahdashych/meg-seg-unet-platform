@@ -127,7 +127,12 @@ export class ModelsService {
 
     // START TRAINING ON RUNPOD (async - don't wait)
     this.runpodOrchestratorService
-      .startTraining(savedModel, dataset, trainModelDto.gpuTypeId)
+      .startTraining(
+        savedModel,
+        dataset,
+        trainModelDto.gpuTypeId,
+        trainModelDto.templateImageName
+      )
       .catch((error) => {
         console.error(`Failed to start training for model ${savedModel.id}:`, error);
         this.updateStatus(savedModel.id, 'failed', error.message);

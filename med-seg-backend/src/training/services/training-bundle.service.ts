@@ -154,12 +154,6 @@ uv venv .venv
 # Activate virtual environment
 source .venv/bin/activate
 
-echo "Installing Python dependencies with uv..."
-uv add torch>=2.1.0 torchvision>=0.16.0 numpy>=1.24.0 \\
-               pillow>=10.0.0 boto3>=1.28.0 albumentations>=1.3.0 \\
-               tqdm>=4.65.0 matplotlib>=3.7.0 scikit-image>=0.21.0
-
-echo "Dependencies installed successfully"
 echo "Virtual environment activated at .venv"
 `;
 

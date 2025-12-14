@@ -127,6 +127,9 @@ export class Model {
   @Column({ name: 'runpod_gpu_type', nullable: true })
   runpodGpuType: string;
 
+  @Column({ name: 'runpod_template_image', nullable: true })
+  runpodTemplateImage: string;
+
   @Column('real', { name: 'runpod_cost_per_hour', nullable: true })
   runpodCostPerHour: number;
 

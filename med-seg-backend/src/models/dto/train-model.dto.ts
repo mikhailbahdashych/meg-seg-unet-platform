@@ -2,6 +2,8 @@ export class TrainModelDto {
   name: string;
   datasetId: number;
   gpuTypeId: string; // RunPod GPU type identifier (e.g., "NVIDIA RTX A6000")
+  templateId?: string; // Optional RunPod template ID
+  templateImageName?: string; // Optional custom image name (overrides template)
 
   // U-Net Architecture - Basic (optional - will use defaults if not provided)
   // Defaults optimized for demo: fast training (~5-10 min on Chest X-Rays)

@@ -29,7 +29,8 @@ export class RunPodOrchestratorService {
   async startTraining(
     model: Model,
     dataset: Dataset,
-    gpuTypeId: string
+    gpuTypeId: string,
+    templateImageName?: string
   ): Promise<void> {
     this.logger.log(
       `Starting training for model ${model.id} on GPU type ${gpuTypeId}`
@@ -56,7 +57,8 @@ export class RunPodOrchestratorService {
       await this.modelsRepository.update(model.id, {
         runpodPodId: pod.id,
         runpodUsername: 'root',
-        runpodGpuType: gpuTypeId
+        runpodGpuType: gpuTypeId,
+        runpodTemplateImage: templateImageName || pod.imageName || 'default'
       });
 
       // 5. Wait for pod to be ready
