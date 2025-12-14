@@ -24,11 +24,12 @@ export class SettingsService {
 
   updateAwsCredentials(
     credentials: UpdateAwsCredentialsDto
-  ): Observable<{ success: boolean; error?: string }> {
-    return this.http.put<{ success: boolean; error?: string }>(
-      `${this.apiUrl}/credentials/aws`,
-      credentials
-    );
+  ): Observable<{ success: boolean; bucketCreated?: boolean; error?: string }> {
+    return this.http.put<{
+      success: boolean;
+      bucketCreated?: boolean;
+      error?: string;
+    }>(`${this.apiUrl}/credentials/aws`, credentials);
   }
 
   updateRunpodCredentials(
@@ -51,6 +52,18 @@ export class SettingsService {
     return this.http.post<{ valid: boolean; error?: string }>(
       `${this.apiUrl}/credentials/runpod/validate`,
       {}
+    );
+  }
+
+  deleteAwsCredentials(): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      `${this.apiUrl}/credentials/aws`
+    );
+  }
+
+  deleteRunpodCredentials(): Observable<{ success: boolean }> {
+    return this.http.delete<{ success: boolean }>(
+      `${this.apiUrl}/credentials/runpod`
     );
   }
 }

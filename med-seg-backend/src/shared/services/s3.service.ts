@@ -3,7 +3,11 @@ import {
   S3Client,
   ListObjectsV2Command,
   DeleteObjectsCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  CreateBucketCommandInput,
+  BucketLocationConstraint
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -197,6 +201,65 @@ export class S3Service {
       return {
         success: false,
         error: error.message || 'Failed to connect to S3'
+      };
+    }
+  }
+
+  async ensureBucketExists(
+    bucketName: string,
+    region: string
+  ): Promise<{ exists: boolean; created: boolean; error?: string }> {
+    try {
+      await this.ensureInitialized();
+
+      // Check if bucket exists
+      try {
+        const headCommand = new HeadBucketCommand({
+          Bucket: bucketName
+        });
+        await this.s3Client!.send(headCommand);
+        return { exists: true, created: false };
+      } catch (error) {
+        // Bucket doesn't exist or access denied
+        if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+          // Try to create the bucket
+          try {
+            const createParams: CreateBucketCommandInput = {
+              Bucket: bucketName
+            };
+
+            // For regions other than us-east-1, specify LocationConstraint
+            if (region && region !== 'us-east-1') {
+              createParams.CreateBucketConfiguration = {
+                LocationConstraint: region as BucketLocationConstraint
+              };
+            }
+
+            const createCommand = new CreateBucketCommand(createParams);
+            await this.s3Client!.send(createCommand);
+
+            return { exists: true, created: true };
+          } catch (createError) {
+            return {
+              exists: false,
+              created: false,
+              error: `Failed to create bucket: ${createError.message}`
+            };
+          }
+        } else {
+          // Access denied or other error
+          return {
+            exists: false,
+            created: false,
+            error: `Cannot access bucket: ${error.message}`
+          };
+        }
+      }
+    } catch (error) {
+      return {
+        exists: false,
+        created: false,
+        error: error.message || 'Failed to check/create bucket'
       };
     }
   }

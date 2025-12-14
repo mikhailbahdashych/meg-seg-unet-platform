@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body } from '@nestjs/common';
+import { Controller, Get, Put, Post, Delete, Body } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { UpdateAwsCredentialsDto } from './dto/update-aws-credentials.dto';
 import { UpdateRunpodCredentialsDto } from './dto/update-runpod-credentials.dto';
@@ -16,7 +16,7 @@ export class SettingsController {
   @Put('credentials/aws')
   async updateAwsCredentials(
     @Body() dto: UpdateAwsCredentialsDto
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; bucketCreated?: boolean; error?: string }> {
     return this.settingsService.updateAwsCredentials(dto);
   }
 
@@ -35,5 +35,15 @@ export class SettingsController {
   @Post('credentials/runpod/validate')
   async validateRunpod(): Promise<{ valid: boolean; error?: string }> {
     return this.settingsService.validateRunpodCredentials();
+  }
+
+  @Delete('credentials/aws')
+  async deleteAwsCredentials(): Promise<{ success: boolean }> {
+    return this.settingsService.deleteAwsCredentials();
+  }
+
+  @Delete('credentials/runpod')
+  async deleteRunpodCredentials(): Promise<{ success: boolean }> {
+    return this.settingsService.deleteRunpodCredentials();
   }
 }

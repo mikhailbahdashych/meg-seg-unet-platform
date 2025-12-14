@@ -34,9 +34,11 @@ export class SettingsService {
     return creds[0];
   }
 
-  async updateAwsCredentials(
-    dto: UpdateAwsCredentialsDto
-  ): Promise<{ success: boolean; error?: string }> {
+  async updateAwsCredentials(dto: UpdateAwsCredentialsDto): Promise<{
+    success: boolean;
+    bucketCreated?: boolean;
+    error?: string;
+  }> {
     const creds = await this.getCredentials();
 
     // Encrypt and save credentials
@@ -51,11 +53,33 @@ export class SettingsService {
     await this.credentialsRepository.save(creds);
     this.credentialsService.invalidateCache();
 
+    // Initialize S3Service with new credentials
+    await this.s3Service.initializeWithCredentials({
+      accessKeyId: dto.awsAccessKeyId,
+      secretAccessKey: dto.awsSecretAccessKey,
+      region: dto.awsRegion,
+      bucketName: dto.awsS3BucketName
+    });
+
+    // Ensure bucket exists (create if needed)
+    const bucketResult = await this.s3Service.ensureBucketExists(
+      dto.awsS3BucketName,
+      dto.awsRegion
+    );
+
+    if (!bucketResult.exists) {
+      return {
+        success: false,
+        error: bucketResult.error || 'Failed to access or create S3 bucket'
+      };
+    }
+
     // Auto-validate credentials
     const validationResult = await this.validateAwsCredentials();
 
     return {
       success: validationResult.valid,
+      bucketCreated: bucketResult.created,
       error: validationResult.error
     };
   }
@@ -167,5 +191,36 @@ export class SettingsService {
         6
       )
     };
+  }
+
+  async deleteAwsCredentials(): Promise<{ success: boolean }> {
+    const creds = await this.getCredentials();
+
+    // Clear AWS credentials
+    creds.awsAccessKeyId = null;
+    creds.awsSecretAccessKey = null;
+    creds.awsRegion = null;
+    creds.awsS3BucketName = null;
+    creds.awsValidated = false;
+    creds.awsLastValidatedAt = null;
+
+    await this.credentialsRepository.save(creds);
+    this.credentialsService.invalidateCache();
+
+    return { success: true };
+  }
+
+  async deleteRunpodCredentials(): Promise<{ success: boolean }> {
+    const creds = await this.getCredentials();
+
+    // Clear RunPod credentials
+    creds.runpodApiKey = null;
+    creds.runpodValidated = false;
+    creds.runpodLastValidatedAt = null;
+
+    await this.credentialsRepository.save(creds);
+    this.credentialsService.invalidateCache();
+
+    return { success: true };
   }
 }
