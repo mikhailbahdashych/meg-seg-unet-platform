@@ -10,13 +10,14 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ModelService } from '@services/model.service';
 import { Model } from '@interfaces/model.interface';
 import { Chart, registerables } from 'chart.js';
+import { UnetVisualizerComponent } from '../../components/unet-visualizer/unet-visualizer.component';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-model-details',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, UnetVisualizerComponent],
   templateUrl: './model-details.component.html',
   styleUrls: ['./model-details.component.scss']
 })

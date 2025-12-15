@@ -299,6 +299,7 @@
 
         &.completed {
           background: #388e3c;
+          margin-left: 0.2rem;
         }
       }
 
@@ -457,6 +458,11 @@
       }
     }
   }
+}
+
+// U-Net Architecture Visualization
+.architecture-visualization-card {
+  grid-column: 1 / -1; // Span all columns
 }
 
 // Training History Charts

@@ -315,6 +315,19 @@
         </div>
       </div>
     </div>
+
+    <!-- U-Net Architecture Visualization -->
+    <div class="card architecture-visualization-card">
+      <h2>U-Net Architecture Visualization</h2>
+      <app-unet-visualizer
+        [inputChannels]="model.inputChannels"
+        [outputChannels]="model.outputChannels"
+        [baseFilters]="model.baseFilters"
+        [depth]="model.depth"
+        [filterMultiplier]="model.filterMultiplier"
+        [inputSize]="256"
+      ></app-unet-visualizer>
+    </div>
   </div>
 </div>
 
