@@ -63,6 +63,37 @@
       </div>
     </div>
 
+    <!-- Template Selection & Save -->
+    <div class="section">
+      <h2>Model Template</h2>
+      <p class="help-text">Load a saved template or configure manually and save your settings</p>
+
+      <div class="form-group">
+        <label for="modelTemplate">Load Template (Optional)</label>
+        <select
+          id="modelTemplate"
+          [(ngModel)]="selectedModelTemplate"
+          (change)="onModelTemplateChange()"
+          [disabled]="isSubmitting"
+        >
+          <option [ngValue]="null">Configure Manually (No Template)</option>
+          <option *ngFor="let template of modelTemplates" [ngValue]="template">
+            {{ template.name }}
+            <span *ngIf="template.description"> - {{ template.description }}</span>
+          </option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="openSaveTemplateDialog()"
+        [disabled]="isSubmitting"
+      >
+        Save Current Configuration as Template
+      </button>
+    </div>
+
     <!-- GPU Configuration -->
     <div class="section">
       <h2>GPU Configuration</h2>
@@ -502,3 +533,15 @@
     </div>
   </div>
 </div>
+
+<!-- Save Template Modal -->
+<app-save-template-modal
+  [show]="showSaveTemplateDialog"
+  [templateName]="newTemplateName"
+  [templateDescription]="newTemplateDescription"
+  [saving]="savingTemplate"
+  (close)="closeSaveTemplateDialog()"
+  (save)="saveAsTemplate($event)"
+  (templateNameChange)="newTemplateName = $event"
+  (templateDescriptionChange)="newTemplateDescription = $event"
+></app-save-template-modal>

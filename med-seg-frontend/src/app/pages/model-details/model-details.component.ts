@@ -6,18 +6,27 @@ import {
   ViewChild
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ModelService } from '@services/model.service';
 import { Model } from '@interfaces/model.interface';
 import { Chart, registerables } from 'chart.js';
 import { UnetVisualizerComponent } from '../../components/unet-visualizer/unet-visualizer.component';
+import { ModelTemplateService } from '@services/model-template.service';
+import { SaveTemplateModalComponent } from '../../components/save-template-modal/save-template-modal.component';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-model-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, UnetVisualizerComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    UnetVisualizerComponent,
+    SaveTemplateModalComponent
+  ],
   templateUrl: './model-details.component.html',
   styleUrls: ['./model-details.component.scss']
 })
@@ -34,10 +43,16 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
   @ViewChild('lossChartCanvas') lossChartCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('diceChartCanvas') diceChartCanvas!: ElementRef<HTMLCanvasElement>;
 
+  showSaveTemplateDialog = false;
+  newTemplateName = '';
+  newTemplateDescription = '';
+  savingTemplate = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private modelService: ModelService
+    private modelService: ModelService,
+    private modelTemplateService: ModelTemplateService
   ) {}
 
   ngOnInit(): void {
@@ -422,5 +437,63 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
       selu: 'SELU'
     };
     return activations[activation] || activation.toUpperCase();
+  }
+
+  openSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = true;
+    this.newTemplateName = this.model?.name
+      ? `${this.model.name} Template`
+      : '';
+    this.newTemplateDescription = '';
+  }
+
+  closeSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = false;
+  }
+
+  saveAsTemplate(data: { name: string; description: string }): void {
+    if (!this.model) return;
+
+    this.savingTemplate = true;
+
+    const templateData = {
+      name: data.name,
+      description: data.description || undefined,
+      inputChannels: this.model.inputChannels,
+      outputChannels: this.model.outputChannels,
+      baseFilters: this.model.baseFilters,
+      depth: this.model.depth,
+      kernelSize: this.model.kernelSize,
+      numConvsPerBlock: this.model.numConvsPerBlock,
+      poolingType: this.model.poolingType,
+      poolingSize: this.model.poolingSize,
+      upsamplingType: this.model.upsamplingType,
+      upsamplingSize: this.model.upsamplingSize,
+      useBatchNorm: this.model.useBatchNorm,
+      activation: this.model.activation,
+      dropoutRate: this.model.dropoutRate,
+      skipConnections: this.model.skipConnections,
+      filterMultiplier: this.model.filterMultiplier,
+      epochs: this.model.epochs,
+      batchSize: this.model.batchSize,
+      learningRate: this.model.learningRate,
+      optimizer: this.model.optimizer,
+      lossFunction: this.model.lossFunction,
+      validationSplit: this.model.validationSplit
+    };
+
+    this.modelTemplateService.createTemplate(templateData).subscribe({
+      next: (template) => {
+        console.log('Template saved:', template);
+        this.savingTemplate = false;
+        this.closeSaveTemplateDialog();
+        alert(`Template "${template.name}" saved successfully!`);
+      },
+      error: (error) => {
+        console.error('Error saving template:', error);
+        this.savingTemplate = false;
+        alert('Failed to save template');
+      }
+    });
   }
 }

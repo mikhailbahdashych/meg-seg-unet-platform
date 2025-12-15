@@ -6,13 +6,21 @@ import { DatasetService } from '@services/dataset.service';
 import { ModelService } from '@services/model.service';
 import { SettingsService } from '@services/settings.service';
 import { TrainingService, GpuType } from '@services/training.service';
+import { ModelTemplateService } from '@services/model-template.service';
 import { Dataset } from '@interfaces/dataset.interface';
 import { Template } from '@interfaces/template.interface';
+import { ModelTemplate } from '@interfaces/model-template.interface';
+import { SaveTemplateModalComponent } from '../../components/save-template-modal/save-template-modal.component';
 
 @Component({
   selector: 'app-train',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    SaveTemplateModalComponent
+  ],
   templateUrl: './train.component.html',
   styleUrls: ['./train.component.scss']
 })
@@ -43,6 +51,15 @@ export class TrainComponent implements OnInit {
     includePublicTemplates: false,
     includeEndpointBoundTemplates: false
   };
+
+  // Model Templates
+  modelTemplates: ModelTemplate[] = [];
+  selectedModelTemplate: ModelTemplate | null = null;
+  loadingModelTemplates = false;
+  showSaveTemplateDialog = false;
+  newTemplateName = '';
+  newTemplateDescription = '';
+  savingTemplate = false;
 
   showAdvancedArchitecture = false;
 
@@ -84,6 +101,7 @@ export class TrainComponent implements OnInit {
     private modelService: ModelService,
     private settingsService: SettingsService,
     private trainingService: TrainingService,
+    private modelTemplateService: ModelTemplateService,
     private router: Router
   ) {}
 
@@ -91,6 +109,7 @@ export class TrainComponent implements OnInit {
     this.checkCredentials();
     this.loadGpuTypes();
     this.loadTemplates();
+    this.loadModelTemplates();
   }
 
   checkCredentials(): void {
@@ -240,5 +259,97 @@ export class TrainComponent implements OnInit {
   getSelectedDatasetName(): string {
     const dataset = this.datasets.find((d) => d.id === this.selectedDatasetId);
     return dataset ? dataset.name : 'None selected';
+  }
+
+  loadModelTemplates(): void {
+    this.loadingModelTemplates = true;
+    this.modelTemplateService.getAllTemplates().subscribe({
+      next: (templates) => {
+        this.modelTemplates = templates;
+        this.loadingModelTemplates = false;
+      },
+      error: (error) => {
+        console.error('Error loading model templates:', error);
+        this.loadingModelTemplates = false;
+      }
+    });
+  }
+
+  onModelTemplateChange(): void {
+    if (this.selectedModelTemplate) {
+      this.applyModelTemplate(this.selectedModelTemplate);
+    }
+  }
+
+  applyModelTemplate(template: ModelTemplate): void {
+    // Apply architecture settings
+    this.architecture = {
+      inputChannels: template.inputChannels,
+      outputChannels: template.outputChannels,
+      baseFilters: template.baseFilters,
+      depth: template.depth
+    };
+
+    // Apply advanced architecture settings
+    this.advancedArchitecture = {
+      kernelSize: template.kernelSize,
+      numConvsPerBlock: template.numConvsPerBlock,
+      poolingType: template.poolingType,
+      poolingSize: template.poolingSize,
+      upsamplingType: template.upsamplingType,
+      upsamplingSize: template.upsamplingSize,
+      useBatchNorm: template.useBatchNorm,
+      activation: template.activation,
+      dropoutRate: template.dropoutRate,
+      skipConnections: template.skipConnections,
+      filterMultiplier: template.filterMultiplier
+    };
+
+    // Apply training hyperparameters
+    this.training = {
+      epochs: template.epochs,
+      batchSize: template.batchSize,
+      learningRate: template.learningRate,
+      optimizer: template.optimizer,
+      lossFunction: template.lossFunction,
+      validationSplit: template.validationSplit
+    };
+  }
+
+  openSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = true;
+    this.newTemplateName = '';
+    this.newTemplateDescription = '';
+  }
+
+  closeSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = false;
+  }
+
+  saveAsTemplate(data: { name: string; description: string }): void {
+    this.savingTemplate = true;
+
+    const templateData = {
+      name: data.name,
+      description: data.description || undefined,
+      ...this.architecture,
+      ...this.advancedArchitecture,
+      ...this.training
+    };
+
+    this.modelTemplateService.createTemplate(templateData).subscribe({
+      next: (template) => {
+        console.log('Template saved:', template);
+        this.savingTemplate = false;
+        this.closeSaveTemplateDialog();
+        this.loadModelTemplates();
+        alert(`Template "${template.name}" saved successfully!`);
+      },
+      error: (error) => {
+        console.error('Error saving template:', error);
+        this.savingTemplate = false;
+        alert('Failed to save template');
+      }
+    });
   }
 }

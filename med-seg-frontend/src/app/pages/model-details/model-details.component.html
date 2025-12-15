@@ -20,6 +20,12 @@
 <img src="assets/icons/emojis/download.png" alt="Download" class="btn-icon" /> Download Model
       </button>
       <button
+        class="btn-secondary"
+        (click)="openSaveTemplateDialog()"
+      >
+        Save as Template
+      </button>
+      <button
         class="btn-warning"
         *ngIf="isActiveStatus(model.status)"
         (click)="cancelTraining()"
@@ -345,3 +351,15 @@
     Back to Models
   </button>
 </div>
+
+<!-- Save Template Modal -->
+<app-save-template-modal
+  [show]="showSaveTemplateDialog"
+  [templateName]="newTemplateName"
+  [templateDescription]="newTemplateDescription"
+  [saving]="savingTemplate"
+  (close)="closeSaveTemplateDialog()"
+  (save)="saveAsTemplate($event)"
+  (templateNameChange)="newTemplateName = $event"
+  (templateDescriptionChange)="newTemplateDescription = $event"
+></app-save-template-modal>
