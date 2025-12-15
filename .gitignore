@@ -112,3 +112,4 @@ med-seg-backend/test-dataset.zip
 
 med-seg-ml/.venv
 med-seg-ml/*.zip
+med-seg-ml/__pycache__

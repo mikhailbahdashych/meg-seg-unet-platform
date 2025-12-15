@@ -209,6 +209,37 @@ export class S3Service {
     }
   }
 
+  async downloadFileToDisk(s3Key: string, localPath: string): Promise<void> {
+    await this.ensureInitialized();
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName!,
+        Key: s3Key
+      });
+
+      const response = await this.s3Client!.send(command);
+      const stream = response.Body as any;
+
+      // Create directory if it doesn't exist
+      const dir = path.dirname(localPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Write stream to file
+      const writeStream = fs.createWriteStream(localPath);
+
+      return new Promise((resolve, reject) => {
+        stream.pipe(writeStream);
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+    } catch (error) {
+      throw new UploadException(`Failed to download file from S3: ${error.message}`);
+    }
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
       await this.ensureInitialized();

@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ModelsController } from './models.controller';
 import { ModelsService } from './models.service';
+import { InferenceService } from './inference.service';
 import { Model } from './entities/model.entity';
 import { ModelTemplate } from './entities/model-template.entity';
 import { Dataset } from '../datasets/entities/dataset.entity';
@@ -18,7 +19,7 @@ import { ModelTemplatesService } from './model-templates.service';
     )
   ],
   controllers: [ModelsController, ModelTemplatesController],
-  providers: [ModelsService, ModelTemplatesService],
-  exports: [ModelsService, ModelTemplatesService]
+  providers: [ModelsService, ModelTemplatesService, InferenceService],
+  exports: [ModelsService, ModelTemplatesService, InferenceService]
 })
 export class ModelsModule {}
