@@ -1,6 +1,11 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatSliderModule } from '@angular/material/slider';
 import { ModelService } from '@services/model.service';
 import {
   InferenceService,
@@ -8,11 +13,27 @@ import {
   BatchInferenceResult
 } from '@services/inference.service';
 import { Model } from '@interfaces/model.interface';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-inference',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatRadioModule,
+    MatSliderModule,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent,
+    EmptyStateComponent
+  ],
   templateUrl: './inference.component.html',
   styleUrls: ['./inference.component.scss']
 })

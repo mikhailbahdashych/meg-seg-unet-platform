@@ -8,12 +8,18 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ModelService } from '@services/model.service';
 import { Model } from '@interfaces/model.interface';
 import { Chart, registerables } from 'chart.js';
 import { UnetVisualizerComponent } from '../../components/unet-visualizer/unet-visualizer.component';
 import { ModelTemplateService } from '@services/model-template.service';
 import { SaveTemplateModalComponent } from '../../components/save-template-modal/save-template-modal.component';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 Chart.register(...registerables);
 
@@ -24,8 +30,14 @@ Chart.register(...registerables);
     CommonModule,
     FormsModule,
     RouterModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
     UnetVisualizerComponent,
-    SaveTemplateModalComponent
+    SaveTemplateModalComponent,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent
   ],
   templateUrl: './model-details.component.html',
   styleUrls: ['./model-details.component.scss']

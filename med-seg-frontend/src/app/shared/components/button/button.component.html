@@ -1,4 +1,24 @@
+<!-- Button with RouterLink -->
+<a
+  *ngIf="routerLink"
+  [routerLink]="routerLink"
+  [class]="'btn btn-' + variant + ' btn-' + size + (fullWidth ? ' btn-full-width' : '') + (disabled || loading ? ' disabled' : '')"
+  [attr.aria-disabled]="disabled || loading"
+  (click)="disabled || loading ? $event.preventDefault() : onClick($event)"
+>
+  <mat-spinner
+    *ngIf="loading"
+    [diameter]="size === 'sm' ? 16 : size === 'lg' ? 24 : 20"
+    class="btn-spinner"
+  ></mat-spinner>
+  <mat-icon *ngIf="icon && !loading && iconPosition === 'left'" class="btn-icon">{{ icon }}</mat-icon>
+  <span class="btn-label"><ng-content></ng-content></span>
+  <mat-icon *ngIf="icon && !loading && iconPosition === 'right'" class="btn-icon">{{ icon }}</mat-icon>
+</a>
+
+<!-- Regular Button -->
 <button
+  *ngIf="!routerLink"
   [type]="type"
   [class]="'btn btn-' + variant + ' btn-' + size + (fullWidth ? ' btn-full-width' : '')"
   [disabled]="disabled || loading"
@@ -9,6 +29,7 @@
     [diameter]="size === 'sm' ? 16 : size === 'lg' ? 24 : 20"
     class="btn-spinner"
   ></mat-spinner>
-  <mat-icon *ngIf="icon && !loading" class="btn-icon">{{ icon }}</mat-icon>
+  <mat-icon *ngIf="icon && !loading && iconPosition === 'left'" class="btn-icon">{{ icon }}</mat-icon>
   <span class="btn-label"><ng-content></ng-content></span>
+  <mat-icon *ngIf="icon && !loading && iconPosition === 'right'" class="btn-icon">{{ icon }}</mat-icon>
 </button>

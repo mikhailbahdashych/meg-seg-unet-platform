@@ -14,6 +14,14 @@
   position: relative;
   overflow: hidden;
   white-space: nowrap;
+  text-decoration: none;
+
+  // For anchor tags acting as buttons
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
 
   &::before {
     content: '';

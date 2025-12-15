@@ -1,265 +1,390 @@
-<div class="inference-container">
-  <div class="inference-header">
+<div class="inference-page">
+  <!-- Page Header -->
+  <div class="page-header">
     <h1>Run Inference</h1>
     <p class="subtitle">Upload an image and run segmentation with a trained model</p>
   </div>
 
   <!-- Error Message -->
-  <div class="error-message" *ngIf="errorMessage">
-    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
-    {{ errorMessage }}
-  </div>
-
-  <!-- Model Selection Section -->
-  <div class="section">
-    <h2>Select Model</h2>
-    <div class="form-group">
-      <label for="model">Choose a trained model *</label>
-      <select
-        id="model"
-        [(ngModel)]="selectedModelId"
-        [disabled]="isRunning"
-      >
-        <option [value]="null" disabled>Select a model...</option>
-        <option *ngFor="let model of models" [value]="model.id">
-          {{ model.name }} (Trained: {{ model.createdAt | date:'short' }})
-        </option>
-      </select>
-      <p class="help-text" *ngIf="models.length === 0">
-        No trained models available. Please train a model first.
-      </p>
+  <app-card *ngIf="errorMessage" class="error-card">
+    <div class="error-content">
+      <mat-icon class="error-icon">error</mat-icon>
+      <span>{{ errorMessage }}</span>
     </div>
+  </app-card>
 
-    <!-- Show model details if selected -->
-    <div class="model-info" *ngIf="getSelectedModel()">
-      <p><strong>Architecture:</strong> {{ getSelectedModel()!.depth }}-layer U-Net with {{ getSelectedModel()!.baseFilters }} base filters</p>
-      <p><strong>Training:</strong> {{ getSelectedModel()!.epochs }} epochs, {{ getSelectedModel()!.batchSize }} batch size</p>
-    </div>
-  </div>
+  <div class="inference-content">
+    <!-- Model Selection Section -->
+    <app-card class="section">
+      <div class="section-header">
+        <mat-icon>psychology</mat-icon>
+        <h2>Select Model</h2>
+      </div>
 
-  <!-- Inference Mode Selection -->
-  <div class="section">
-    <h2>Inference Mode</h2>
-    <div class="form-group">
-      <label>Select inference mode *</label>
+      <div class="form-group">
+        <label for="model">Choose a trained model *</label>
+        <select
+          id="model"
+          [(ngModel)]="selectedModelId"
+          [disabled]="isRunning"
+        >
+          <option [value]="null" disabled>Select a model...</option>
+          <option *ngFor="let model of models" [value]="model.id">
+            {{ model.name }} (Trained: {{ model.createdAt | date:'short' }})
+          </option>
+        </select>
+      </div>
+
+      <app-empty-state
+        *ngIf="models.length === 0"
+        icon="model_training"
+        title="No trained models available"
+        description="Please train a model first before running inference">
+        <app-button variant="primary" icon="add" [routerLink]="['/train']">
+          Train Your First Model
+        </app-button>
+      </app-empty-state>
+
+      <!-- Show model details if selected -->
+      <div class="model-info" *ngIf="getSelectedModel()">
+        <div class="info-item">
+          <mat-icon>architecture</mat-icon>
+          <div>
+            <span class="info-label">Architecture</span>
+            <span class="info-value">{{ getSelectedModel()!.depth }}-layer U-Net with {{ getSelectedModel()!.baseFilters }} base filters</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <mat-icon>settings</mat-icon>
+          <div>
+            <span class="info-label">Training Configuration</span>
+            <span class="info-value">{{ getSelectedModel()!.epochs }} epochs, batch size {{ getSelectedModel()!.batchSize }}</span>
+          </div>
+        </div>
+      </div>
+    </app-card>
+
+    <!-- Inference Mode Selection -->
+    <app-card class="section">
+      <div class="section-header">
+        <mat-icon>tune</mat-icon>
+        <h2>Inference Mode</h2>
+      </div>
+
       <div class="mode-selector">
-        <label class="radio-label">
-          <input
-            type="radio"
-            name="inferenceMode"
-            [value]="'single'"
-            [(ngModel)]="inferenceMode"
-            (change)="onModeChange()"
-            [disabled]="isRunning"
-          />
-          <span>Single Image</span>
-          <p class="mode-description">Upload and process one image at a time</p>
-        </label>
-        <label class="radio-label">
-          <input
-            type="radio"
-            name="inferenceMode"
-            [value]="'batch'"
-            [(ngModel)]="inferenceMode"
-            (change)="onModeChange()"
-            [disabled]="isRunning"
-          />
-          <span>Batch Processing</span>
-          <p class="mode-description">Upload a ZIP file with multiple images</p>
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Image Upload Section -->
-  <div class="section">
-    <h2>{{ inferenceMode === 'single' ? 'Upload Image' : 'Upload ZIP File' }}</h2>
-    <div class="form-group">
-      <label for="imageFile">
-        {{ inferenceMode === 'single' ? 'Select image file *' : 'Select ZIP file containing images *' }}
-      </label>
-      <input
-        type="file"
-        id="imageFile"
-        (change)="onFileSelected($event)"
-        [accept]="inferenceMode === 'single' ? '.png,.jpg,.jpeg,.bmp,.tiff' : '.zip'"
-        [disabled]="isRunning"
-      />
-      <p class="help-text" *ngIf="inferenceMode === 'single'">
-        Supported formats: PNG, JPG, JPEG, BMP, TIFF (max 10MB)
-      </p>
-      <p class="help-text" *ngIf="inferenceMode === 'batch'">
-        Upload a ZIP file containing images (PNG, JPG, JPEG, BMP, TIFF). Max 100 images, 100MB total.
-      </p>
-    </div>
-
-    <!-- Image Preview (Single Mode Only) -->
-    <div class="image-preview" *ngIf="imagePreview && inferenceMode === 'single'">
-      <h3>Preview</h3>
-      <img [src]="imagePreview" alt="Upload preview" />
-    </div>
-
-    <!-- ZIP File Info (Batch Mode) -->
-    <div class="file-info" *ngIf="selectedFile && inferenceMode === 'batch'">
-      <p><strong>Selected file:</strong> {{ selectedFile.name }}</p>
-      <p><strong>Size:</strong> {{ (selectedFile.size / 1024 / 1024) | number:'1.2-2' }} MB</p>
-    </div>
-  </div>
-
-  <!-- Run Inference Button -->
-  <div class="actions">
-    <button
-      type="button"
-      class="btn-primary"
-      (click)="runInference()"
-      [disabled]="!canRunInference()"
-    >
-      <span *ngIf="!isRunning">Run Inference</span>
-      <span *ngIf="isRunning">
-        <span class="spinner"></span>
-        Running Inference...
-      </span>
-    </button>
-  </div>
-
-  <!-- Batch Results Summary -->
-  <div class="batch-summary" *ngIf="batchResult">
-    <h2>Batch Processing Summary</h2>
-    <div class="summary-stats">
-      <div class="summary-stat">
-        <span class="stat-number">{{ batchResult.total }}</span>
-        <span class="stat-label">Total Images</span>
-      </div>
-      <div class="summary-stat success">
-        <span class="stat-number">{{ batchResult.successful }}</span>
-        <span class="stat-label">Successful</span>
-      </div>
-      <div class="summary-stat failed" *ngIf="batchResult.failed > 0">
-        <span class="stat-number">{{ batchResult.failed }}</span>
-        <span class="stat-label">Failed</span>
-      </div>
-    </div>
-
-    <!-- Batch Results Navigation -->
-    <div class="batch-navigation" *ngIf="batchResult.results.length > 0">
-      <h3>Browse Results ({{ selectedResultIndex + 1 }} / {{ batchResult.results.length }})</h3>
-      <div class="navigation-controls">
-        <button
-          class="nav-btn"
-          (click)="selectBatchResult(selectedResultIndex - 1)"
-          [disabled]="selectedResultIndex === 0"
+        <mat-radio-group
+          [(ngModel)]="inferenceMode"
+          (change)="onModeChange()"
+          [disabled]="isRunning"
         >
-          Previous
-        </button>
-        <span class="current-index">
-          Image {{ selectedResultIndex + 1 }} of {{ batchResult.results.length }}
-        </span>
-        <button
-          class="nav-btn"
-          (click)="selectBatchResult(selectedResultIndex + 1)"
-          [disabled]="selectedResultIndex === batchResult.results.length - 1"
-        >
-          Next
-        </button>
+          <div class="mode-option">
+            <mat-radio-button value="single">
+              <div class="mode-content">
+                <div class="mode-header">
+                  <mat-icon>image</mat-icon>
+                  <span class="mode-title">Single Image</span>
+                </div>
+                <p class="mode-description">Upload and process one image at a time</p>
+              </div>
+            </mat-radio-button>
+          </div>
+
+          <div class="mode-option">
+            <mat-radio-button value="batch">
+              <div class="mode-content">
+                <div class="mode-header">
+                  <mat-icon>burst_mode</mat-icon>
+                  <span class="mode-title">Batch Processing</span>
+                </div>
+                <p class="mode-description">Upload a ZIP file with multiple images</p>
+              </div>
+            </mat-radio-button>
+          </div>
+        </mat-radio-group>
+      </div>
+    </app-card>
+
+    <!-- Image Upload Section -->
+    <app-card class="section">
+      <div class="section-header">
+        <mat-icon>{{ inferenceMode === 'single' ? 'upload_file' : 'folder_zip' }}</mat-icon>
+        <h2>{{ inferenceMode === 'single' ? 'Upload Image' : 'Upload ZIP File' }}</h2>
       </div>
 
-      <!-- Thumbnail Gallery -->
-      <div class="thumbnail-gallery">
-        <div
-          *ngFor="let result of batchResult.results; let i = index"
-          class="thumbnail"
-          [class.active]="i === selectedResultIndex"
-          (click)="selectBatchResult(i)"
-        >
-          <img [src]="result.originalImage" [alt]="'Image ' + (i + 1)" />
-          <span class="thumbnail-label">{{ i + 1 }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Results Section -->
-  <div class="results-section" *ngIf="inferenceResult">
-    <h2>{{ batchResult ? 'Selected Result' : 'Results' }}</h2>
-
-    <!-- View Mode Tabs -->
-    <div class="view-tabs">
-      <button
-        [class.active]="viewMode === 'side-by-side'"
-        (click)="switchView('side-by-side')"
-      >
-        Side-by-Side
-      </button>
-      <button
-        [class.active]="viewMode === 'overlay'"
-        (click)="switchView('overlay')"
-      >
-        Overlay
-      </button>
-      <button
-        [class.active]="viewMode === 'heatmap'"
-        (click)="switchView('heatmap')"
-      >
-        Confidence Heatmap
-      </button>
-    </div>
-
-    <!-- Side-by-Side View -->
-    <div class="side-by-side" *ngIf="viewMode === 'side-by-side'">
-      <div class="image-panel">
-        <h3>Original Image</h3>
-        <img [src]="inferenceResult.originalImage" alt="Original" />
-      </div>
-      <div class="image-panel">
-        <h3>Segmentation Mask</h3>
-        <img [src]="inferenceResult.maskImage" alt="Mask" />
-      </div>
-    </div>
-
-    <!-- Overlay View -->
-    <div class="overlay-view" *ngIf="viewMode === 'overlay'">
-      <canvas #overlayCanvas></canvas>
-      <div class="opacity-control">
-        <label for="opacity">Mask Opacity: {{ maskOpacity }}%</label>
+      <div class="upload-area" [class.has-file]="selectedFile">
         <input
-          type="range"
-          id="opacity"
-          min="0"
-          max="100"
-          [(ngModel)]="maskOpacity"
-          (input)="renderOverlay()"
+          type="file"
+          id="imageFile"
+          (change)="onFileSelected($event)"
+          [accept]="inferenceMode === 'single' ? '.png,.jpg,.jpeg,.bmp,.tiff' : '.zip'"
+          [disabled]="isRunning"
+          hidden
         />
+        <label for="imageFile" class="upload-label">
+          <mat-icon class="upload-icon">{{ inferenceMode === 'single' ? 'add_photo_alternate' : 'folder_zip' }}</mat-icon>
+          <span class="upload-text">
+            {{ selectedFile ? selectedFile.name : (inferenceMode === 'single' ? 'Click to upload image' : 'Click to upload ZIP file') }}
+          </span>
+          <span class="upload-hint">
+            {{ inferenceMode === 'single'
+              ? 'Supported formats: PNG, JPG, JPEG, BMP, TIFF (max 10MB)'
+              : 'ZIP file with images (PNG, JPG, JPEG, BMP, TIFF). Max 100 images, 100MB total.'
+            }}
+          </span>
+        </label>
       </div>
+
+      <!-- Image Preview (Single Mode Only) -->
+      <div class="preview-section" *ngIf="imagePreview && inferenceMode === 'single'">
+        <h3>
+          <mat-icon>preview</mat-icon>
+          Preview
+        </h3>
+        <div class="preview-image">
+          <img [src]="imagePreview" alt="Upload preview" />
+        </div>
+      </div>
+
+      <!-- ZIP File Info (Batch Mode) -->
+      <div class="file-info-grid" *ngIf="selectedFile && inferenceMode === 'batch'">
+        <div class="info-item">
+          <mat-icon>description</mat-icon>
+          <div>
+            <span class="info-label">File name</span>
+            <span class="info-value">{{ selectedFile.name }}</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <mat-icon>data_usage</mat-icon>
+          <div>
+            <span class="info-label">File size</span>
+            <span class="info-value">{{ (selectedFile.size / 1024 / 1024) | number:'1.2-2' }} MB</span>
+          </div>
+        </div>
+      </div>
+    </app-card>
+
+    <!-- Run Inference Button -->
+    <div class="actions">
+      <app-button
+        variant="primary"
+        [icon]="isRunning ? '' : 'play_arrow'"
+        [loading]="isRunning"
+        [disabled]="!canRunInference()"
+        (click)="runInference()"
+        size="lg"
+      >
+        {{ isRunning ? 'Running Inference...' : 'Run Inference' }}
+      </app-button>
     </div>
 
-    <!-- Confidence Heatmap View -->
-    <div class="heatmap-view" *ngIf="viewMode === 'heatmap'">
-      <div class="heatmap-image">
-        <img [src]="inferenceResult.confidenceMap" alt="Confidence Heatmap" />
+    <!-- Batch Results Summary -->
+    <app-card *ngIf="batchResult" class="batch-summary">
+      <div class="section-header">
+        <mat-icon>assessment</mat-icon>
+        <h2>Batch Processing Summary</h2>
       </div>
-      <div class="legend">
-        <span class="legend-label">Low Confidence</span>
-        <div class="legend-gradient"></div>
-        <span class="legend-label">High Confidence</span>
+
+      <div class="summary-stats">
+        <div class="summary-stat">
+          <mat-icon>image</mat-icon>
+          <div class="stat-content">
+            <span class="stat-number">{{ batchResult.total }}</span>
+            <span class="stat-label">Total Images</span>
+          </div>
+        </div>
+        <div class="summary-stat success">
+          <mat-icon>check_circle</mat-icon>
+          <div class="stat-content">
+            <span class="stat-number">{{ batchResult.successful }}</span>
+            <span class="stat-label">Successful</span>
+          </div>
+        </div>
+        <div class="summary-stat failed" *ngIf="batchResult.failed > 0">
+          <mat-icon>error</mat-icon>
+          <div class="stat-content">
+            <span class="stat-number">{{ batchResult.failed }}</span>
+            <span class="stat-label">Failed</span>
+          </div>
+        </div>
       </div>
-      <div class="stats">
-        <div class="stat-item">
-          <span class="stat-label">Mean Confidence:</span>
-          <span class="stat-value">{{ (inferenceResult.metadata.meanConfidence * 100) | number:'1.2-2' }}%</span>
+
+      <!-- Batch Results Navigation -->
+      <div class="batch-navigation" *ngIf="batchResult.results.length > 0">
+        <div class="navigation-header">
+          <h3>
+            <mat-icon>grid_view</mat-icon>
+            Browse Results
+          </h3>
+          <app-badge variant="neutral">{{ selectedResultIndex + 1 }} / {{ batchResult.results.length }}</app-badge>
         </div>
-        <div class="stat-item">
-          <span class="stat-label">Max Confidence:</span>
-          <span class="stat-value">{{ (inferenceResult.metadata.maxConfidence * 100) | number:'1.2-2' }}%</span>
+
+        <div class="navigation-controls">
+          <app-button
+            variant="secondary"
+            icon="navigate_before"
+            [disabled]="selectedResultIndex === 0"
+            (click)="selectBatchResult(selectedResultIndex - 1)"
+          >
+            Previous
+          </app-button>
+
+          <span class="current-index">
+            Image {{ selectedResultIndex + 1 }} of {{ batchResult.results.length }}
+          </span>
+
+          <app-button
+            variant="secondary"
+            icon="navigate_next"
+            iconPosition="right"
+            [disabled]="selectedResultIndex === batchResult.results.length - 1"
+            (click)="selectBatchResult(selectedResultIndex + 1)"
+          >
+            Next
+          </app-button>
         </div>
-        <div class="stat-item">
-          <span class="stat-label">Min Confidence:</span>
-          <span class="stat-value">{{ (inferenceResult.metadata.minConfidence * 100) | number:'1.2-2' }}%</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">Inference Time:</span>
-          <span class="stat-value">{{ inferenceResult.metadata.inferenceTimeMs }}ms</span>
+
+        <!-- Thumbnail Gallery -->
+        <div class="thumbnail-gallery">
+          <div
+            *ngFor="let result of batchResult.results; let i = index"
+            class="thumbnail"
+            [class.active]="i === selectedResultIndex"
+            (click)="selectBatchResult(i)"
+            [matTooltip]="'Image ' + (i + 1)"
+          >
+            <img [src]="result.originalImage" [alt]="'Image ' + (i + 1)" />
+            <span class="thumbnail-label">{{ i + 1 }}</span>
+            <mat-icon class="active-indicator">check_circle</mat-icon>
+          </div>
         </div>
       </div>
-    </div>
+    </app-card>
+
+    <!-- Results Section -->
+    <app-card *ngIf="inferenceResult" class="results-section">
+      <div class="section-header">
+        <mat-icon>auto_awesome</mat-icon>
+        <h2>{{ batchResult ? 'Selected Result' : 'Results' }}</h2>
+      </div>
+
+      <!-- View Mode Tabs -->
+      <div class="view-tabs">
+        <button
+          class="view-tab"
+          [class.active]="viewMode === 'side-by-side'"
+          (click)="switchView('side-by-side')"
+        >
+          <mat-icon>view_column</mat-icon>
+          <span>Side-by-Side</span>
+        </button>
+        <button
+          class="view-tab"
+          [class.active]="viewMode === 'overlay'"
+          (click)="switchView('overlay')"
+        >
+          <mat-icon>layers</mat-icon>
+          <span>Overlay</span>
+        </button>
+        <button
+          class="view-tab"
+          [class.active]="viewMode === 'heatmap'"
+          (click)="switchView('heatmap')"
+        >
+          <mat-icon>gradient</mat-icon>
+          <span>Confidence Heatmap</span>
+        </button>
+      </div>
+
+      <!-- Side-by-Side View -->
+      <div class="side-by-side" *ngIf="viewMode === 'side-by-side'">
+        <div class="image-panel">
+          <div class="panel-header">
+            <mat-icon>image</mat-icon>
+            <h3>Original Image</h3>
+          </div>
+          <div class="image-container">
+            <img [src]="inferenceResult.originalImage" alt="Original" />
+          </div>
+        </div>
+        <div class="image-panel">
+          <div class="panel-header">
+            <mat-icon>texture</mat-icon>
+            <h3>Segmentation Mask</h3>
+          </div>
+          <div class="image-container">
+            <img [src]="inferenceResult.maskImage" alt="Mask" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Overlay View -->
+      <div class="overlay-view" *ngIf="viewMode === 'overlay'">
+        <div class="canvas-container">
+          <canvas #overlayCanvas></canvas>
+        </div>
+        <div class="opacity-control">
+          <div class="control-header">
+            <mat-icon>opacity</mat-icon>
+            <label for="opacity">Mask Opacity</label>
+            <span class="opacity-value">{{ maskOpacity }}%</span>
+          </div>
+          <mat-slider
+            min="0"
+            max="100"
+            step="1"
+            [(ngModel)]="maskOpacity"
+            (input)="renderOverlay()"
+            discrete
+          >
+            <input matSliderThumb />
+          </mat-slider>
+        </div>
+      </div>
+
+      <!-- Confidence Heatmap View -->
+      <div class="heatmap-view" *ngIf="viewMode === 'heatmap'">
+        <div class="heatmap-image">
+          <img [src]="inferenceResult.confidenceMap" alt="Confidence Heatmap" />
+        </div>
+
+        <div class="legend">
+          <span class="legend-label">Low Confidence</span>
+          <div class="legend-gradient"></div>
+          <span class="legend-label">High Confidence</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <mat-icon>analytics</mat-icon>
+            <div class="stat-content">
+              <span class="stat-label">Mean Confidence</span>
+              <span class="stat-value">{{ (inferenceResult.metadata.meanConfidence * 100) | number:'1.2-2' }}%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <mat-icon>trending_up</mat-icon>
+            <div class="stat-content">
+              <span class="stat-label">Max Confidence</span>
+              <span class="stat-value">{{ (inferenceResult.metadata.maxConfidence * 100) | number:'1.2-2' }}%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <mat-icon>trending_down</mat-icon>
+            <div class="stat-content">
+              <span class="stat-label">Min Confidence</span>
+              <span class="stat-value">{{ (inferenceResult.metadata.minConfidence * 100) | number:'1.2-2' }}%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <mat-icon>timer</mat-icon>
+            <div class="stat-content">
+              <span class="stat-label">Inference Time</span>
+              <span class="stat-value">{{ inferenceResult.metadata.inferenceTimeMs }}ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </app-card>
   </div>
 </div>

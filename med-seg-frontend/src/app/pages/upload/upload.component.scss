@@ -316,6 +316,8 @@
     gap: var(--space-4);
 
     .dataset-card {
+      transition: all var(--transition-base);
+
       .dataset-content {
         display: flex;
         flex-direction: column;
