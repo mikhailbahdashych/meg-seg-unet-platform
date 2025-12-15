@@ -82,13 +82,7 @@
               </p>
             </div>
 
-            <label for="file-input" class="file-input-wrapper">
-              <app-button
-                [variant]="selectedFile ? 'secondary' : 'primary'"
-                icon="folder_open"
-                [disabled]="isUploading">
-                {{ selectedFile ? 'Change File' : 'Browse Files' }}
-              </app-button>
+            <div class="file-input-wrapper">
               <input
                 id="file-input"
                 type="file"
@@ -97,7 +91,14 @@
                 [disabled]="isUploading"
                 style="display: none"
               />
-            </label>
+              <app-button
+                [variant]="selectedFile ? 'secondary' : 'primary'"
+                icon="folder_open"
+                [disabled]="isUploading"
+                (click)="triggerFileInput()">
+                {{ selectedFile ? 'Change File' : 'Browse Files' }}
+              </app-button>
+            </div>
           </div>
         </div>
 

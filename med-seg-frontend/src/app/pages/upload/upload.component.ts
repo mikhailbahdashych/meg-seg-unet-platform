@@ -115,6 +115,13 @@ export class UploadComponent implements OnInit {
     }
   }
 
+  triggerFileInput(): void {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
