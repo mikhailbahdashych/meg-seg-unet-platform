@@ -19,6 +19,13 @@ export interface InferenceResult {
   };
 }
 
+export interface BatchInferenceResult {
+  results: InferenceResult[];
+  total: number;
+  successful: number;
+  failed: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -33,6 +40,19 @@ export class InferenceService {
 
     return this.http.post<InferenceResult>(
       `${this.apiUrl}/${modelId}/infer`,
+      formData
+    );
+  }
+
+  runBatchInference(
+    modelId: number,
+    zipFile: File
+  ): Observable<BatchInferenceResult> {
+    const formData = new FormData();
+    formData.append('file', zipFile);
+
+    return this.http.post<BatchInferenceResult>(
+      `${this.apiUrl}/${modelId}/infer-batch`,
       formData
     );
   }

@@ -37,25 +37,72 @@
     </div>
   </div>
 
+  <!-- Inference Mode Selection -->
+  <div class="section">
+    <h2>Inference Mode</h2>
+    <div class="form-group">
+      <label>Select inference mode *</label>
+      <div class="mode-selector">
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="inferenceMode"
+            [value]="'single'"
+            [(ngModel)]="inferenceMode"
+            (change)="onModeChange()"
+            [disabled]="isRunning"
+          />
+          <span>Single Image</span>
+          <p class="mode-description">Upload and process one image at a time</p>
+        </label>
+        <label class="radio-label">
+          <input
+            type="radio"
+            name="inferenceMode"
+            [value]="'batch'"
+            [(ngModel)]="inferenceMode"
+            (change)="onModeChange()"
+            [disabled]="isRunning"
+          />
+          <span>Batch Processing</span>
+          <p class="mode-description">Upload a ZIP file with multiple images</p>
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- Image Upload Section -->
   <div class="section">
-    <h2>Upload Image</h2>
+    <h2>{{ inferenceMode === 'single' ? 'Upload Image' : 'Upload ZIP File' }}</h2>
     <div class="form-group">
-      <label for="imageFile">Select image file *</label>
+      <label for="imageFile">
+        {{ inferenceMode === 'single' ? 'Select image file *' : 'Select ZIP file containing images *' }}
+      </label>
       <input
         type="file"
         id="imageFile"
         (change)="onFileSelected($event)"
-        accept=".png,.jpg,.jpeg,.bmp,.tiff"
+        [accept]="inferenceMode === 'single' ? '.png,.jpg,.jpeg,.bmp,.tiff' : '.zip'"
         [disabled]="isRunning"
       />
-      <p class="help-text">Supported formats: PNG, JPG, JPEG, BMP, TIFF (max 10MB)</p>
+      <p class="help-text" *ngIf="inferenceMode === 'single'">
+        Supported formats: PNG, JPG, JPEG, BMP, TIFF (max 10MB)
+      </p>
+      <p class="help-text" *ngIf="inferenceMode === 'batch'">
+        Upload a ZIP file containing images (PNG, JPG, JPEG, BMP, TIFF). Max 100 images, 100MB total.
+      </p>
     </div>
 
-    <!-- Image Preview -->
-    <div class="image-preview" *ngIf="imagePreview">
+    <!-- Image Preview (Single Mode Only) -->
+    <div class="image-preview" *ngIf="imagePreview && inferenceMode === 'single'">
       <h3>Preview</h3>
       <img [src]="imagePreview" alt="Upload preview" />
+    </div>
+
+    <!-- ZIP File Info (Batch Mode) -->
+    <div class="file-info" *ngIf="selectedFile && inferenceMode === 'batch'">
+      <p><strong>Selected file:</strong> {{ selectedFile.name }}</p>
+      <p><strong>Size:</strong> {{ (selectedFile.size / 1024 / 1024) | number:'1.2-2' }} MB</p>
     </div>
   </div>
 
@@ -75,9 +122,65 @@
     </button>
   </div>
 
+  <!-- Batch Results Summary -->
+  <div class="batch-summary" *ngIf="batchResult">
+    <h2>Batch Processing Summary</h2>
+    <div class="summary-stats">
+      <div class="summary-stat">
+        <span class="stat-number">{{ batchResult.total }}</span>
+        <span class="stat-label">Total Images</span>
+      </div>
+      <div class="summary-stat success">
+        <span class="stat-number">{{ batchResult.successful }}</span>
+        <span class="stat-label">Successful</span>
+      </div>
+      <div class="summary-stat failed" *ngIf="batchResult.failed > 0">
+        <span class="stat-number">{{ batchResult.failed }}</span>
+        <span class="stat-label">Failed</span>
+      </div>
+    </div>
+
+    <!-- Batch Results Navigation -->
+    <div class="batch-navigation" *ngIf="batchResult.results.length > 0">
+      <h3>Browse Results ({{ selectedResultIndex + 1 }} / {{ batchResult.results.length }})</h3>
+      <div class="navigation-controls">
+        <button
+          class="nav-btn"
+          (click)="selectBatchResult(selectedResultIndex - 1)"
+          [disabled]="selectedResultIndex === 0"
+        >
+          Previous
+        </button>
+        <span class="current-index">
+          Image {{ selectedResultIndex + 1 }} of {{ batchResult.results.length }}
+        </span>
+        <button
+          class="nav-btn"
+          (click)="selectBatchResult(selectedResultIndex + 1)"
+          [disabled]="selectedResultIndex === batchResult.results.length - 1"
+        >
+          Next
+        </button>
+      </div>
+
+      <!-- Thumbnail Gallery -->
+      <div class="thumbnail-gallery">
+        <div
+          *ngFor="let result of batchResult.results; let i = index"
+          class="thumbnail"
+          [class.active]="i === selectedResultIndex"
+          (click)="selectBatchResult(i)"
+        >
+          <img [src]="result.originalImage" [alt]="'Image ' + (i + 1)" />
+          <span class="thumbnail-label">{{ i + 1 }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Results Section -->
   <div class="results-section" *ngIf="inferenceResult">
-    <h2>Results</h2>
+    <h2>{{ batchResult ? 'Selected Result' : 'Results' }}</h2>
 
     <!-- View Mode Tabs -->
     <div class="view-tabs">

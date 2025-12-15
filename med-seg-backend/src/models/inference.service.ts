@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as AdmZip from 'adm-zip';
 import { Model } from './entities/model.entity';
 import { S3Service } from '@shared/services/s3.service';
 import { InferenceResultDto } from './dto/inference-result.dto';
@@ -170,6 +171,153 @@ export class InferenceService {
         console.error(`[Inference] Cleanup error:`, cleanupError);
       }
     }
+  }
+
+  async runBatchInference(
+    modelId: number,
+    zipFile: Express.Multer.File
+  ): Promise<{
+    results: InferenceResultDto[];
+    total: number;
+    successful: number;
+    failed: number;
+  }> {
+    const model = await this.modelsRepository.findOne({ where: { id: modelId } });
+    if (!model) {
+      throw new NotFoundException(`Model with ID ${modelId} not found`);
+    }
+
+    if (model.status !== 'completed') {
+      throw new BadRequestException(
+        `Model training is not completed. Current status: ${model.status}`
+      );
+    }
+
+    const zipPath = zipFile.path;
+    const extractDir = path.join(
+      process.cwd(),
+      'temp',
+      'batch-inference',
+      `extract_${Date.now()}`
+    );
+
+    try {
+      // Extract ZIP file
+      console.log(`[Batch Inference] Extracting ZIP file...`);
+      fs.mkdirSync(extractDir, { recursive: true });
+
+      const zip = new AdmZip(zipPath);
+      zip.extractAllTo(extractDir, true);
+
+      // Find all image files
+      const imageFiles = this.findImageFiles(extractDir);
+      console.log(`[Batch Inference] Found ${imageFiles.length} images`);
+
+      if (imageFiles.length === 0) {
+        throw new BadRequestException('No valid image files found in ZIP');
+      }
+
+      if (imageFiles.length > 100) {
+        throw new BadRequestException('Maximum 100 images allowed per batch');
+      }
+
+      // Run inference on each image
+      const results: InferenceResultDto[] = [];
+      let successful = 0;
+      let failed = 0;
+
+      for (const imageFile of imageFiles) {
+        try {
+          console.log(`[Batch Inference] Processing ${path.basename(imageFile)}...`);
+
+          // Create a fake Multer file object
+          const multerFile: Express.Multer.File = {
+            path: imageFile,
+            originalname: path.basename(imageFile),
+            filename: path.basename(imageFile),
+            mimetype: this.getMimeType(imageFile),
+            size: fs.statSync(imageFile).size,
+            fieldname: 'file',
+            encoding: '7bit',
+            destination: path.dirname(imageFile),
+            buffer: Buffer.from([]),
+            stream: null as any
+          };
+
+          const result = await this.runInference(modelId, multerFile);
+          results.push(result);
+          successful++;
+        } catch (error) {
+          console.error(
+            `[Batch Inference] Failed to process ${path.basename(imageFile)}:`,
+            error.message
+          );
+          failed++;
+          // Continue with next image
+        }
+      }
+
+      console.log(
+        `[Batch Inference] Completed: ${successful} successful, ${failed} failed`
+      );
+
+      return {
+        results,
+        total: imageFiles.length,
+        successful,
+        failed
+      };
+    } finally {
+      // Clean up
+      try {
+        if (fs.existsSync(extractDir)) {
+          fs.rmSync(extractDir, { recursive: true, force: true });
+        }
+        if (fs.existsSync(zipPath)) {
+          fs.unlinkSync(zipPath);
+        }
+      } catch (cleanupError) {
+        console.error(`[Batch Inference] Cleanup error:`, cleanupError);
+      }
+    }
+  }
+
+  private findImageFiles(dir: string): string[] {
+    const imageFiles: string[] = [];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'];
+
+    const walk = (currentDir: string) => {
+      const files = fs.readdirSync(currentDir);
+
+      for (const file of files) {
+        const filePath = path.join(currentDir, file);
+        const stat = fs.statSync(filePath);
+
+        if (stat.isDirectory()) {
+          walk(filePath);
+        } else if (stat.isFile()) {
+          const ext = path.extname(file).toLowerCase();
+          if (allowedExtensions.includes(ext)) {
+            imageFiles.push(filePath);
+          }
+        }
+      }
+    };
+
+    walk(dir);
+    return imageFiles;
+  }
+
+  private getMimeType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.bmp': 'image/bmp',
+      '.tiff': 'image/tiff'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
   }
 
   private async executePythonScript(

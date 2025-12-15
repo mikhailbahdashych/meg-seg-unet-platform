@@ -221,12 +221,12 @@ def postprocess_and_save(mask_np, confidence_np, original_image, original_size, 
     # Calculate statistics
     metadata = {
         'status': 'success',
-        'original_size': list(original_size),  # [width, height]
-        'model_input_size': [mask_np.shape[1], mask_np.shape[0]],  # [width, height]
+        'originalSize': list(original_size),  # [width, height]
+        'modelInputSize': [mask_np.shape[1], mask_np.shape[0]],  # [width, height]
         'threshold': 0.5,
-        'mean_confidence': float(confidence_np.mean()),
-        'max_confidence': float(confidence_np.max()),
-        'min_confidence': float(confidence_np.min())
+        'meanConfidence': float(confidence_np.mean()),
+        'maxConfidence': float(confidence_np.max()),
+        'minConfidence': float(confidence_np.min())
     }
 
     # Save metadata
@@ -296,9 +296,9 @@ def main():
         )
 
         print(f"[SUCCESS] Inference completed successfully!")
-        print(f"[INFO] Mean confidence: {metadata['mean_confidence']:.4f}")
-        print(f"[INFO] Max confidence: {metadata['max_confidence']:.4f}")
-        print(f"[INFO] Min confidence: {metadata['min_confidence']:.4f}")
+        print(f"[INFO] Mean confidence: {metadata['meanConfidence']:.4f}")
+        print(f"[INFO] Max confidence: {metadata['maxConfidence']:.4f}")
+        print(f"[INFO] Min confidence: {metadata['minConfidence']:.4f}")
 
         return 0
 
