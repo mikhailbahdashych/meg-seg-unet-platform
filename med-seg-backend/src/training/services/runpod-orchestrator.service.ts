@@ -417,6 +417,60 @@ EOF`;
     }
   }
 
+  async getTrainingHistory(modelId: number): Promise<any> {
+    this.logger.log(`Fetching training history for model ${modelId}`);
+
+    const model = await this.modelsRepository.findOne({ where: { id: modelId } });
+
+    if (!model) {
+      throw new Error(`Model ${modelId} not found`);
+    }
+
+    if (!model.runpodHost || !model.runpodPort) {
+      throw new Error('Pod connection details not available');
+    }
+
+    try {
+      // Connect to pod
+      const sshConnection = await this.podSshService.connect(
+        model.runpodHost,
+        model.runpodPort,
+        model.runpodUsername || 'root',
+        model.runpodPodId
+      );
+
+      // Check if training history file exists
+      const checkFileResult = await this.podSshService.executeCommand(
+        'test -f /root/output/training_history.json && echo "exists" || echo "not_found"',
+        sshConnection,
+        5000
+      );
+
+      if (checkFileResult.stdout.trim() === 'not_found') {
+        this.logger.debug(
+          `Training history file not yet created for model ${modelId}`
+        );
+        await this.podSshService.disconnect(sshConnection);
+        return null;
+      }
+
+      // Read training history file
+      const historyContent = await this.podSshService.readRemoteFile(
+        '/root/output/training_history.json',
+        sshConnection
+      );
+
+      await this.podSshService.disconnect(sshConnection);
+
+      return JSON.parse(historyContent);
+    } catch (error) {
+      this.logger.error(
+        `Error fetching training history for model ${modelId}: ${error.message}`
+      );
+      return null;
+    }
+  }
+
   async handleTrainingCompletion(modelId: number): Promise<void> {
     this.logger.log(`Handling training completion for model ${modelId}`);
 

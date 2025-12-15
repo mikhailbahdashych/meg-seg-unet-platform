@@ -78,8 +78,8 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
           this.stopPolling();
         }
 
-        // Load training history if model is completed
-        if (model.status === 'completed') {
+        // Load training history if model is completed or training
+        if (model.status === 'completed' || model.status === 'training') {
           this.loadTrainingHistory(id);
         }
       },
@@ -114,7 +114,21 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
     const valLoss = history.map((h: any) => h.val_loss);
     const diceScore = history.map((h: any) => h.dice_score);
 
-    // Destroy existing charts
+    // If charts exist, update their data
+    if (this.lossChart && this.diceChart) {
+      this.lossChart.data.labels = epochs;
+      this.lossChart.data.datasets[0].data = trainLoss;
+      this.lossChart.data.datasets[1].data = valLoss;
+      this.lossChart.update();
+
+      this.diceChart.data.labels = epochs;
+      this.diceChart.data.datasets[0].data = diceScore;
+      this.diceChart.update();
+
+      return;
+    }
+
+    // Otherwise, create new charts
     this.destroyCharts();
 
     // Render Loss Chart
@@ -243,6 +257,11 @@ export class ModelDetailsComponent implements OnInit, OnDestroy {
         // Update model status if changed
         if (this.model && status.status !== this.model.status) {
           this.loadModel(this.model.id);
+        }
+
+        // Refresh training history if model is training
+        if (this.model && this.model.status === 'training') {
+          this.loadTrainingHistory(this.model.id);
         }
 
         // Stop polling if no longer in active state

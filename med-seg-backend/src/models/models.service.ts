@@ -194,21 +194,40 @@ export class ModelsService {
   async getTrainingHistory(id: number): Promise<any> {
     const model = await this.findOne(id);
 
-    if (model.status !== 'completed') {
-      throw new BadRequestException('Model training is not completed yet');
+    // If model is currently training, fetch history from the pod
+    if (['provisioning', 'training', 'uploading'].includes(model.status)) {
+      try {
+        const history = await this.runpodOrchestratorService.getTrainingHistory(id);
+        return history;
+      } catch (error) {
+        console.error(
+          `Error fetching training history from pod for model ${id}:`,
+          error
+        );
+        throw new NotFoundException('Training history not yet available');
+      }
     }
 
-    // Training history is stored alongside the model with _history.json suffix
-    const historyS3Key = model.s3Key.replace('.pth', '_history.json');
+    // If model is completed, fetch history from S3
+    if (model.status === 'completed') {
+      const historyS3Key = model.s3Key.replace('.pth', '_history.json');
 
-    try {
-      // Download training history JSON from S3
-      const historyData = await this.s3Service.downloadFileAsString(historyS3Key);
-      return JSON.parse(historyData);
-    } catch (error) {
-      console.error(`Error fetching training history for model ${id}:`, error);
-      throw new NotFoundException('Training history not found');
+      try {
+        // Download training history JSON from S3
+        const historyData = await this.s3Service.downloadFileAsString(historyS3Key);
+        return JSON.parse(historyData);
+      } catch (error) {
+        console.error(
+          `Error fetching training history from S3 for model ${id}:`,
+          error
+        );
+        throw new NotFoundException('Training history not found');
+      }
     }
+
+    throw new BadRequestException(
+      `Training history is not available for models with status: ${model.status}`
+    );
   }
 
   async cancelTraining(id: number): Promise<Model> {

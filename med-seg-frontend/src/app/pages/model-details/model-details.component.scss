@@ -460,6 +460,21 @@
 }
 
 // Training History Charts
+.training-history-card-standalone {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 1rem 0;
+  }
+}
+
 .training-history-card {
   grid-column: 1 / -1; // Span all columns
 }

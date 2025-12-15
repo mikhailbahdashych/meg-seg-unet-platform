@@ -349,6 +349,14 @@ class ModelTrainer:
                     current_dice_score=dice_score
                 )
 
+                # Write training history after each epoch for real-time monitoring
+                history_path = self.output_dir / 'training_history.json'
+                with open(history_path, 'w') as f:
+                    json.dump({
+                        'hyperparameters': self.config['hyperparameters'],
+                        'history': self.training_history
+                    }, f, indent=2)
+
                 # Save best model
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss

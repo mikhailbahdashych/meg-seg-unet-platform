@@ -97,6 +97,19 @@
     </div>
   </div>
 
+  <!-- Training History Charts (displayed during training) -->
+  <div class="card training-history-card-standalone" *ngIf="model && model.status === 'training' && trainingHistory">
+    <h2>Training History</h2>
+    <div class="charts-container">
+      <div class="chart-wrapper">
+        <canvas #lossChartCanvas></canvas>
+      </div>
+      <div class="chart-wrapper">
+        <canvas #diceChartCanvas></canvas>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Content Grid -->
   <div class="content-grid">
     <!-- U-Net Architecture -->
@@ -290,7 +303,7 @@
       </div>
     </div>
 
-    <!-- Training History Charts -->
+    <!-- Training History Charts (displayed after completion) -->
     <div class="card training-history-card" *ngIf="model && model.status === 'completed' && trainingHistory">
       <h2>Training History</h2>
       <div class="charts-container">
