@@ -1,6 +1,9 @@
-<aside class="sidebar">
+<aside class="sidebar" [class.collapsed]="collapsed">
   <div class="sidebar-header">
-    <h2>MedSeg</h2>
+    <div class="logo-icon">
+      <mat-icon>biotech</mat-icon>
+    </div>
+    <h2 *ngIf="!collapsed">MedSeg</h2>
   </div>
   <nav class="sidebar-nav">
     <a
@@ -8,49 +11,61 @@
       routerLinkActive="active"
       [routerLinkActiveOptions]="{ exact: true }"
       class="nav-item"
+      [matTooltip]="collapsed ? 'Home' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/home.png" alt="Home" class="nav-icon" />
-      <span class="nav-text">Home</span>
+      <mat-icon class="nav-icon">home</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">Home</span>
     </a>
     <a
       routerLink="/upload"
       routerLinkActive="active"
       class="nav-item"
+      [matTooltip]="collapsed ? 'Upload Dataset' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/folder.png" alt="Upload" class="nav-icon" />
-      <span class="nav-text">Upload Dataset</span>
+      <mat-icon class="nav-icon">cloud_upload</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">Upload Dataset</span>
     </a>
     <a
       routerLink="/train"
       routerLinkActive="active"
       class="nav-item"
+      [matTooltip]="collapsed ? 'Train Model' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/brain.png" alt="Train" class="nav-icon" />
-      <span class="nav-text">Train Model</span>
+      <mat-icon class="nav-icon">model_training</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">Train Model</span>
     </a>
     <a
       routerLink="/models"
       routerLinkActive="active"
       class="nav-item"
+      [matTooltip]="collapsed ? 'My Models' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/chart.png" alt="Models" class="nav-icon" />
-      <span class="nav-text">My Models</span>
+      <mat-icon class="nav-icon">dashboard</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">My Models</span>
     </a>
     <a
       routerLink="/inference"
       routerLinkActive="active"
       class="nav-item"
+      [matTooltip]="collapsed ? 'Run Inference' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/microscope.png" alt="Inference" class="nav-icon" />
-      <span class="nav-text">Run Inference</span>
+      <mat-icon class="nav-icon">biotech</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">Run Inference</span>
     </a>
     <a
       routerLink="/settings"
       routerLinkActive="active"
       class="nav-item"
+      [matTooltip]="collapsed ? 'Settings' : ''"
+      matTooltipPosition="right"
     >
-      <img src="assets/icons/emojis/settings.png" alt="Settings" class="nav-icon" />
-      <span class="nav-text">Settings</span>
+      <mat-icon class="nav-icon">settings</mat-icon>
+      <span class="nav-text" *ngIf="!collapsed">Settings</span>
     </a>
   </nav>
 </aside>

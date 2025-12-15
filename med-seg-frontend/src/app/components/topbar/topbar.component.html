@@ -1,0 +1,42 @@
+<header class="topbar">
+  <button mat-icon-button (click)="onSidebarToggle()" class="menu-toggle">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <div class="topbar-spacer"></div>
+
+  <div class="topbar-actions">
+    <!-- Theme toggle -->
+    <button
+      mat-icon-button
+      (click)="onThemeToggle()"
+      [matTooltip]="currentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+      class="action-btn"
+    >
+      <mat-icon>{{ currentTheme === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
+
+    <!-- Notifications (placeholder for future) -->
+    <button
+      mat-icon-button
+      matTooltip="Notifications"
+      [matBadge]="notificationCount"
+      matBadgeColor="warn"
+      [matBadgeHidden]="notificationCount === 0"
+      class="action-btn"
+    >
+      <mat-icon>notifications</mat-icon>
+    </button>
+
+    <!-- User menu -->
+    <button mat-icon-button [matMenuTriggerFor]="userMenu" class="action-btn">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+      <button mat-menu-item routerLink="/settings">
+        <mat-icon>settings</mat-icon>
+        <span>Settings</span>
+      </button>
+    </mat-menu>
+  </div>
+</header>

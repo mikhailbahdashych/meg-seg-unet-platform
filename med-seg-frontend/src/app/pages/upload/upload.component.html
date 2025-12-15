@@ -1,37 +1,57 @@
 <div class="upload-page">
-  <h1>Dataset Upload</h1>
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>Dataset Upload</h1>
+      <p class="page-description">Upload medical image datasets with corresponding segmentation masks for U-Net training</p>
+    </div>
+  </div>
 
   <!-- Checking Credentials -->
-  <div *ngIf="checkingCredentials" class="loading-state">
-    <div class="spinner"></div>
-    <p>Checking credentials...</p>
+  <div *ngIf="checkingCredentials" class="loading-container">
+    <app-skeleton type="card" [count]="1"></app-skeleton>
   </div>
 
   <!-- Credentials Required Guard -->
-  <div *ngIf="!checkingCredentials && !credentialsConfigured" class="credentials-warning">
-    <img src="assets/icons/emojis/warning.png" alt="Warning" class="warning-icon" />
-    <h2>AWS Credentials Required</h2>
-    <p>You need to configure your AWS credentials before you can upload datasets.</p>
-    <a routerLink="/settings" class="btn-primary">Go to Settings</a>
+  <div *ngIf="!checkingCredentials && !credentialsConfigured" class="credentials-guard">
+    <app-card>
+      <app-empty-state
+        icon="warning"
+        title="AWS Credentials Required"
+        description="You need to configure your AWS credentials before you can upload datasets.">
+        <app-button variant="primary" icon="settings" [routerLink]="['/settings']">
+          Configure Settings
+        </app-button>
+      </app-empty-state>
+    </app-card>
   </div>
 
   <!-- Upload Section -->
   <div *ngIf="!checkingCredentials && credentialsConfigured" class="upload-section">
-    <div class="upload-columns">
-      <!-- Left Column: File Upload -->
-      <div class="upload-column left-column">
-        <h3>Upload Dataset File</h3>
+    <app-card [glass]="true">
+      <div class="upload-content">
+        <!-- Upload Header -->
+        <div class="upload-header">
+          <div class="header-icon">
+            <mat-icon>cloud_upload</mat-icon>
+          </div>
+          <h2>Upload New Dataset</h2>
+          <p>Prepare your dataset as a ZIP file containing /images and /masks folders</p>
+        </div>
 
         <!-- Dataset Name Input -->
-        <div class="input-group">
-          <label for="dataset-name" class="input-label">Dataset Name:</label>
+        <div class="form-group">
+          <label for="dataset-name" class="form-label">
+            <mat-icon>label</mat-icon>
+            Dataset Name
+          </label>
           <input
-            #datasetNameInput
             id="dataset-name"
             type="text"
-            class="text-input"
-            placeholder="Enter dataset name..."
-            (input)="onNameChange()"
+            class="form-input"
+            placeholder="Enter a descriptive name for your dataset..."
+            [(ngModel)]="datasetName"
+            [disabled]="isUploading"
           />
         </div>
 
@@ -40,146 +60,213 @@
           class="drop-zone"
           [class.dragging]="isDragging"
           [class.has-file]="selectedFile"
+          [class.disabled]="isUploading"
           (dragover)="onDragOver($event)"
           (dragleave)="onDragLeave($event)"
-          (drop)="onDrop($event)"
-        >
+          (drop)="onDrop($event)">
           <div class="drop-zone-content">
-            <img [src]="selectedFile ? 'assets/icons/check.svg' : 'assets/icons/emojis/upload.png'" alt="Upload" class="upload-icon" />
-            <p class="drop-zone-text" *ngIf="!selectedFile">
-              Drag and drop your dataset ZIP file here
-            </p>
-            <p class="drop-zone-text file-selected" *ngIf="selectedFile">
-              {{ selectedFile.name }}
-            </p>
-            <p class="drop-zone-subtext">{{ selectedFile ? 'or choose another' : 'or' }}</p>
-            <label for="file-input" class="file-button">
-              {{ selectedFile ? 'Change File' : 'Browse Files' }}
+            <div class="drop-icon">
+              <mat-icon *ngIf="!selectedFile">upload_file</mat-icon>
+              <mat-icon *ngIf="selectedFile" class="success-icon">check_circle</mat-icon>
+            </div>
+
+            <div class="drop-text">
+              <p class="primary-text" *ngIf="!selectedFile">
+                Drag and drop your dataset ZIP file here
+              </p>
+              <p class="primary-text success-text" *ngIf="selectedFile">
+                <strong>{{ selectedFile.name }}</strong>
+              </p>
+              <p class="secondary-text">
+                {{ selectedFile ? 'File selected successfully' : 'Maximum file size: 500 MB' }}
+              </p>
+            </div>
+
+            <label for="file-input" class="file-input-wrapper">
+              <app-button
+                [variant]="selectedFile ? 'secondary' : 'primary'"
+                icon="folder_open"
+                [disabled]="isUploading">
+                {{ selectedFile ? 'Change File' : 'Browse Files' }}
+              </app-button>
               <input
                 id="file-input"
                 type="file"
                 accept=".zip"
                 (change)="onFileSelected($event)"
+                [disabled]="isUploading"
                 style="display: none"
               />
             </label>
           </div>
         </div>
 
-        <!-- Upload Button -->
-        <button
-          class="submit-button"
-          [disabled]="!canUpload() || isUploading"
-          (click)="submitUpload()"
-        >
-          <span *ngIf="!isUploading">Upload Dataset</span>
-          <span *ngIf="isUploading" class="loading-content">
-            <span class="spinner-small"></span>
-            Uploading...
-          </span>
-        </button>
-      </div>
+        <!-- Upload Actions -->
+        <div class="upload-actions">
+          <app-button
+            variant="ghost"
+            icon="refresh"
+            [disabled]="!selectedFile || isUploading"
+            (click)="resetForm()">
+            Reset
+          </app-button>
+          <app-button
+            variant="primary"
+            icon="cloud_upload"
+            size="lg"
+            [loading]="isUploading"
+            [disabled]="!canUpload() || isUploading"
+            (click)="submitUpload()">
+            {{ isUploading ? 'Uploading...' : 'Upload Dataset' }}
+          </app-button>
+        </div>
 
-      <!-- Right Column: URL Upload -->
-      <div class="upload-column right-column">
-        <h3>Upload from URL</h3>
-        <p class="coming-soon">Coming soon...</p>
-        <div class="url-input-group">
-          <label for="url-input" class="input-label">Dataset URL:</label>
-          <input
-            #urlInput
-            id="url-input"
-            type="url"
-            class="text-input"
-            placeholder="Enter dataset URL..."
-            disabled
-          />
-          <button class="submit-button" disabled>
-            Upload from URL
-          </button>
+        <!-- Upload Instructions -->
+        <div class="upload-instructions">
+          <div class="instruction-header">
+            <mat-icon>info</mat-icon>
+            <h4>Dataset Requirements</h4>
+          </div>
+          <ul class="instruction-list">
+            <li>
+              <mat-icon class="check-icon">check</mat-icon>
+              ZIP archive containing two folders: <code>/images</code> and <code>/masks</code>
+            </li>
+            <li>
+              <mat-icon class="check-icon">check</mat-icon>
+              Image-mask pairs must have matching filenames
+            </li>
+            <li>
+              <mat-icon class="check-icon">check</mat-icon>
+              Supported formats: PNG, JPG, JPEG
+            </li>
+            <li>
+              <mat-icon class="check-icon">check</mat-icon>
+              Maximum file size: 500 MB
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
+    </app-card>
   </div>
 
   <!-- Datasets List -->
-  <div class="datasets-section">
-    <h2>Uploaded Datasets</h2>
-    <div class="datasets-list">
-      <div class="dataset-card" *ngFor="let dataset of datasets">
-        <div class="dataset-header">
-          <div class="dataset-title">
-            <h3 class="dataset-name" *ngIf="editingDatasetId !== dataset.id">
-              {{ dataset.name }}
-            </h3>
-            <input
-              *ngIf="editingDatasetId === dataset.id"
-              [id]="'edit-input-' + dataset.id"
-              type="text"
-              class="edit-name-input"
-              [value]="dataset.name"
-            />
+  <div *ngIf="!checkingCredentials && credentialsConfigured" class="datasets-section">
+    <div class="section-header">
+      <h2>
+        <mat-icon>folder_open</mat-icon>
+        Uploaded Datasets
+      </h2>
+      <app-badge [variant]="datasets.length > 0 ? 'info' : 'neutral'">
+        {{ datasets.length }} {{ datasets.length === 1 ? 'dataset' : 'datasets' }}
+      </app-badge>
+    </div>
+
+    <div *ngIf="datasets.length === 0" class="empty-datasets">
+      <app-empty-state
+        icon="cloud_upload"
+        title="No Datasets Yet"
+        description="Upload your first medical image dataset to get started with training U-Net models.">
+      </app-empty-state>
+    </div>
+
+    <div class="datasets-grid" *ngIf="datasets.length > 0">
+      <app-card *ngFor="let dataset of datasets" [hover]="true" class="dataset-card">
+        <div class="dataset-content">
+          <!-- Dataset Header -->
+          <div class="dataset-header">
+            <div class="dataset-icon">
+              <mat-icon>dataset</mat-icon>
+            </div>
+            <div class="dataset-title-section">
+              <h3 *ngIf="editingDatasetId !== dataset.id" class="dataset-name">
+                {{ dataset.name }}
+              </h3>
+              <input
+                *ngIf="editingDatasetId === dataset.id"
+                [id]="'edit-input-' + dataset.id"
+                type="text"
+                class="dataset-name-input"
+                [value]="dataset.name"
+                (keydown.enter)="saveEdit(dataset.id)"
+                (keydown.escape)="cancelEdit()"
+              />
+              <app-badge
+                [variant]="dataset.status === 'ready' ? 'success' : dataset.status === 'uploading' ? 'info' : 'error'"
+                [icon]="dataset.status === 'ready' ? 'check_circle' : dataset.status === 'uploading' ? 'hourglass_empty' : 'error'">
+                {{ dataset.status }}
+              </app-badge>
+            </div>
+            <div class="dataset-actions">
+              <button
+                *ngIf="editingDatasetId !== dataset.id"
+                mat-icon-button
+                class="action-btn"
+                (click)="startEdit(dataset.id)"
+                matTooltip="Rename dataset">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button
+                *ngIf="editingDatasetId === dataset.id"
+                mat-icon-button
+                class="action-btn success"
+                (click)="saveEdit(dataset.id)"
+                matTooltip="Save changes">
+                <mat-icon>check</mat-icon>
+              </button>
+              <button
+                *ngIf="editingDatasetId === dataset.id"
+                mat-icon-button
+                class="action-btn"
+                (click)="cancelEdit()"
+                matTooltip="Cancel">
+                <mat-icon>close</mat-icon>
+              </button>
+              <button
+                *ngIf="editingDatasetId !== dataset.id"
+                mat-icon-button
+                class="action-btn danger"
+                (click)="deleteDataset(dataset.id, dataset.name)"
+                [disabled]="isDeletingId === dataset.id"
+                matTooltip="Delete dataset">
+                <mat-icon *ngIf="isDeletingId !== dataset.id">delete</mat-icon>
+                <mat-spinner *ngIf="isDeletingId === dataset.id" diameter="20"></mat-spinner>
+              </button>
+            </div>
           </div>
-          <div class="dataset-actions">
-            <button
-              *ngIf="editingDatasetId !== dataset.id"
-              class="action-button edit-button"
-              (click)="startEdit(dataset.id)"
-              title="Rename dataset"
-            >
-              <img src="assets/icons/emojis/edit.png" alt="Edit" />
-            </button>
-            <button
-              *ngIf="editingDatasetId === dataset.id"
-              class="action-button save-button"
-              (click)="saveEdit(dataset.id)"
-              title="Save changes"
-            >
-              <img src="assets/icons/check.svg" alt="Save" />
-            </button>
-            <button
-              *ngIf="editingDatasetId === dataset.id"
-              class="action-button cancel-button"
-              (click)="cancelEdit()"
-              title="Cancel editing"
-            >
-              <img src="assets/icons/x.svg" alt="Cancel" />
-            </button>
-            <button
-              *ngIf="editingDatasetId !== dataset.id"
-              class="action-button delete-button"
-              [class.deleting]="isDeletingId === dataset.id"
-              (click)="deleteDataset(dataset.id, dataset.name)"
-              [disabled]="isDeletingId === dataset.id"
-              title="Delete dataset"
-            >
-              <img *ngIf="isDeletingId !== dataset.id" src="assets/icons/emojis/trash.png" alt="Delete" />
-              <span *ngIf="isDeletingId === dataset.id" class="spinner-small"></span>
-            </button>
+
+          <!-- Dataset Metadata -->
+          <div class="dataset-metadata">
+            <div class="metadata-item">
+              <mat-icon>insert_photo</mat-icon>
+              <div class="metadata-content">
+                <span class="metadata-label">Files</span>
+                <span class="metadata-value">{{ dataset.fileCount }}</span>
+              </div>
+            </div>
+            <div class="metadata-item">
+              <mat-icon>storage</mat-icon>
+              <div class="metadata-content">
+                <span class="metadata-label">Size</span>
+                <span class="metadata-value">{{ dataset.totalSizeMb }} MB</span>
+              </div>
+            </div>
+            <div class="metadata-item">
+              <mat-icon>schedule</mat-icon>
+              <div class="metadata-content">
+                <span class="metadata-label">Uploaded</span>
+                <span class="metadata-value">{{ dataset.uploadedAt | date: 'short' }}</span>
+              </div>
+            </div>
           </div>
-          <span class="dataset-status" [ngClass]="getStatusClass(dataset.status)">
-            {{ dataset.status }}
-          </span>
+
+          <!-- S3 Location -->
+          <div class="dataset-location">
+            <mat-icon>cloud</mat-icon>
+            <span class="location-text">{{ dataset.s3Bucket }}/{{ dataset.s3Key }}</span>
+          </div>
         </div>
-        <div class="dataset-info">
-          <div class="info-item">
-            <span class="info-label">Files:</span>
-            <span class="info-value">{{ dataset.fileCount }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Size:</span>
-            <span class="info-value">{{ dataset.totalSizeMb }} MB</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Uploaded:</span>
-            <span class="info-value">{{ dataset.uploadedAt | date: 'short' }}</span>
-          </div>
-        </div>
-        <div class="dataset-location">
-          <span class="location-label">S3:</span>
-          <span class="location-value">{{ dataset.s3Bucket }}/{{ dataset.s3Key }}</span>
-        </div>
-      </div>
+      </app-card>
     </div>
   </div>
 </div>

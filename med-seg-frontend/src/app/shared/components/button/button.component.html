@@ -1,0 +1,14 @@
+<button
+  [type]="type"
+  [class]="'btn btn-' + variant + ' btn-' + size + (fullWidth ? ' btn-full-width' : '')"
+  [disabled]="disabled || loading"
+  (click)="onClick($event)"
+>
+  <mat-spinner
+    *ngIf="loading"
+    [diameter]="size === 'sm' ? 16 : size === 'lg' ? 24 : 20"
+    class="btn-spinner"
+  ></mat-spinner>
+  <mat-icon *ngIf="icon && !loading" class="btn-icon">{{ icon }}</mat-icon>
+  <span class="btn-label"><ng-content></ng-content></span>
+</button>

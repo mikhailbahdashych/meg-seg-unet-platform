@@ -1,0 +1,47 @@
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-border) 0%,
+    var(--color-border-strong) 50%,
+    var(--color-border) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+  display: block;
+
+  &.skeleton-text {
+    height: 1em;
+    margin-bottom: 0.5em;
+    border-radius: var(--radius-sm);
+
+    &:last-child {
+      margin-bottom: 0;
+      width: 80%; // Last line is typically shorter
+    }
+  }
+
+  &.skeleton-circle {
+    border-radius: var(--radius-full);
+    width: 40px;
+    height: 40px;
+  }
+
+  &.skeleton-rect {
+    // Default rectangle, uses custom width/height
+  }
+
+  &.skeleton-card {
+    border-radius: var(--radius-xl);
+    height: 200px;
+  }
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

@@ -2,15 +2,25 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSliderModule } from '@angular/material/slider';
 import { DatasetService } from '@services/dataset.service';
 import { ModelService } from '@services/model.service';
 import { SettingsService } from '@services/settings.service';
 import { TrainingService, GpuType } from '@services/training.service';
 import { ModelTemplateService } from '@services/model-template.service';
+import { NotificationService } from '@shared/services/notification.service';
 import { Dataset } from '@interfaces/dataset.interface';
 import { Template } from '@interfaces/template.interface';
 import { ModelTemplate } from '@interfaces/model-template.interface';
 import { SaveTemplateModalComponent } from '../../components/save-template-modal/save-template-modal.component';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-train',
@@ -19,7 +29,16 @@ import { SaveTemplateModalComponent } from '../../components/save-template-modal
     CommonModule,
     FormsModule,
     RouterModule,
-    SaveTemplateModalComponent
+    MatIconModule,
+    MatTooltipModule,
+    MatExpansionModule,
+    MatSliderModule,
+    SaveTemplateModalComponent,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent,
+    EmptyStateComponent,
+    SkeletonComponent
   ],
   templateUrl: './train.component.html',
   styleUrls: ['./train.component.scss']
@@ -102,6 +121,7 @@ export class TrainComponent implements OnInit {
     private settingsService: SettingsService,
     private trainingService: TrainingService,
     private modelTemplateService: ModelTemplateService,
+    private notificationService: NotificationService,
     private router: Router
   ) {}
 
