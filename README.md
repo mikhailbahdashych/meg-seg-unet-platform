@@ -284,7 +284,6 @@ med-seg-platform/
 |
 +-- package.json             # Root package.json with convenience scripts
 +-- docker-compose.yml       # Docker composition file
-+-- CLAUDE.md                # Development guidelines
 +-- README.md                # This file
 ```
 
