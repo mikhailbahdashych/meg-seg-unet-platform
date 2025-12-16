@@ -121,7 +121,6 @@ Before installing the platform, ensure you have the following installed:
 
 Optional but recommended:
 - **CUDA-capable GPU**: For faster model training
-- **Docker**: For containerized deployment
 
 ## Installation
 
@@ -283,7 +282,6 @@ med-seg-platform/
 |   +-- README.md
 |
 +-- package.json             # Root package.json with convenience scripts
-+-- docker-compose.yml       # Docker composition file
 +-- README.md                # This file
 ```
 
@@ -521,19 +519,6 @@ npm test                  # Run Karma tests
 ```
 
 ## Deployment
-
-### Docker Deployment
-
-A `docker-compose.yml` file is provided for containerized deployment:
-
-```bash
-docker-compose up -d
-```
-
-This will start:
-- Backend service on port 4201
-- Frontend service on port 4200
-- ML processing environment
 
 ### Manual Deployment
 

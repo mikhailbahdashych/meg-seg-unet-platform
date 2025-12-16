@@ -50,6 +50,10 @@ export class DatasetsController {
           cb(null, `dataset-${uniqueSuffix}.zip`);
         }
       }),
+      limits: {
+        fileSize: 2 * 1024 * 1024 * 1024, // 2GB limit
+        files: 1
+      },
       fileFilter: (req, file, cb) => {
         if (
           file.mimetype === 'application/zip' ||

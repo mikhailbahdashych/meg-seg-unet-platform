@@ -11,12 +11,17 @@ import { json, urlencoded } from 'express';
     'http://localhost:4000' // Blog production front
   ];
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
+    rawBody: true
+  });
   const port = process.env.API_PORT || 4201;
 
   app.setGlobalPrefix('/api');
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
+  // Increase payload limits for large dataset uploads (up to 2GB)
+  app.use(json({ limit: '2gb' }));
+  app.use(urlencoded({ extended: true, limit: '2gb' }));
 
   app.enableCors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Access-Token'],
@@ -25,7 +30,10 @@ import { json, urlencoded } from 'express';
     credentials: true
   });
 
-  await app.listen(port, () => {
+  const server = await app.listen(port, () => {
     console.log(`Personal blog server started on port ${port}`);
   });
+
+  // Increase timeout for large file uploads (10 minutes)
+  server.setTimeout(600000);
 })();

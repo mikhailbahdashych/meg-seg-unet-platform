@@ -669,10 +669,6 @@ pm2 save
 pm2 startup
 ```
 
-### Docker Deployment
-
-The project includes a `docker-compose.yml` file for containerized deployment.
-
 ## Troubleshooting
 
 ### Common Issues
