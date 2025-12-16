@@ -48,6 +48,8 @@ export interface Model {
   runpodHost?: string;
   runpodPort?: number;
   runpodUsername?: string;
+  runpodGpuType?: string;
+  runpodTemplateImage?: string;
 
   // Training Metrics
   finalLoss?: number;

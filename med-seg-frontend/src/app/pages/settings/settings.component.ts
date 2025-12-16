@@ -1,13 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SettingsService } from '@services/settings.service';
 import { CredentialsStatusDto } from '@interfaces/credentials.interface';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
@@ -76,8 +89,13 @@ export class SettingsComponent implements OnInit {
       next: (response) => {
         this.isSavingAws = false;
         if (response.success) {
-          this.awsSuccessMessage =
-            'AWS credentials saved and validated successfully!';
+          if (response.bucketCreated) {
+            this.awsSuccessMessage =
+              'AWS credentials validated successfully! S3 bucket created.';
+          } else {
+            this.awsSuccessMessage =
+              'AWS credentials saved and validated successfully!';
+          }
           // Clear password field for security
           this.awsSecretAccessKey = '';
           // Reload status to show masked credentials
@@ -148,5 +166,68 @@ export class SettingsComponent implements OnInit {
     if (!date) return 'Never';
     const d = new Date(date);
     return d.toLocaleString();
+  }
+
+  deleteAwsCredentials(): void {
+    if (
+      !confirm(
+        'Are you sure you want to delete your AWS credentials? This action cannot be undone.'
+      )
+    ) {
+      return;
+    }
+
+    this.awsSuccessMessage = '';
+    this.awsErrorMessage = '';
+
+    this.settingsService.deleteAwsCredentials().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.awsSuccessMessage = 'AWS credentials deleted successfully.';
+          // Clear form fields
+          this.awsAccessKeyId = '';
+          this.awsSecretAccessKey = '';
+          this.awsRegion = 'us-east-1';
+          this.awsS3BucketName = '';
+          // Reload status
+          this.loadStatus();
+        }
+      },
+      error: (error) => {
+        console.error('Error deleting AWS credentials:', error);
+        this.awsErrorMessage =
+          error.error?.message || 'Failed to delete AWS credentials';
+      }
+    });
+  }
+
+  deleteRunpodCredentials(): void {
+    if (
+      !confirm(
+        'Are you sure you want to delete your RunPod API key? This action cannot be undone.'
+      )
+    ) {
+      return;
+    }
+
+    this.runpodSuccessMessage = '';
+    this.runpodErrorMessage = '';
+
+    this.settingsService.deleteRunpodCredentials().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.runpodSuccessMessage = 'RunPod API key deleted successfully.';
+          // Clear form fields
+          this.runpodApiKey = '';
+          // Reload status
+          this.loadStatus();
+        }
+      },
+      error: (error) => {
+        console.error('Error deleting RunPod credentials:', error);
+        this.runpodErrorMessage =
+          error.error?.message || 'Failed to delete RunPod API key';
+      }
+    });
   }
 }

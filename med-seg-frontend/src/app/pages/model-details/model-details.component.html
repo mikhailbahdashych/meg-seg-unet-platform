@@ -1,45 +1,84 @@
-<div class="model-details-container" *ngIf="!isLoading && model">
-  <!-- Header -->
-  <div class="details-header">
-    <div class="header-left">
-      <button class="btn-back" [routerLink]="['/models']">
-        <img src="assets/icons/arrows/back.svg" alt="Back" class="back-icon" />
-        Back to Models
-      </button>
-      <h1>{{ model.name }}</h1>
-      <span class="status-badge" [ngClass]="getStatusClass(model.status)">
-        {{ getStatusLabel(model.status) }}
-      </span>
-    </div>
-    <div class="header-actions">
-      <button
-        class="btn-secondary"
-        *ngIf="model.status === 'completed'"
-        (click)="downloadModel()"
+<div class="model-details-page" *ngIf="!isLoading && model">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-top">
+      <app-button
+        variant="ghost"
+        icon="arrow_back"
+        [routerLink]="['/models']"
       >
-<img src="assets/icons/emojis/download.png" alt="Download" class="btn-icon" /> Download Model
-      </button>
-      <button class="btn-danger" (click)="deleteModel()">
-<img src="assets/icons/emojis/trash.png" alt="Delete" class="btn-icon" /> Delete
-      </button>
+        Back to Models
+      </app-button>
     </div>
-  </div>
 
-  <!-- Error Message -->
-  <div class="error-banner" *ngIf="model.status === 'failed' && model.errorMessage">
-    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
-    <div>
-      <h3>Training Failed</h3>
-      <p>{{ model.errorMessage }}</p>
-    </div>
-  </div>
-
-  <!-- Training in Progress -->
-  <div class="progress-banner" *ngIf="isActiveStatus(model.status)">
-    <div class="progress-content">
-      <div class="progress-icon">
-        <div class="spinner"></div>
+    <div class="header-content">
+      <div class="header-left">
+        <h1>{{ model.name }}</h1>
+        <app-badge
+          [variant]="model.status === 'completed' ? 'success' : model.status === 'training' ? 'info' : model.status === 'failed' ? 'error' : 'neutral'"
+          [icon]="model.status === 'completed' ? 'check_circle' : model.status === 'training' ? 'hourglass_empty' : model.status === 'failed' ? 'error' : 'pending'"
+        >
+          {{ getStatusLabel(model.status) }}
+        </app-badge>
       </div>
+
+      <div class="header-actions">
+        <app-button
+          *ngIf="model.status === 'completed'"
+          variant="secondary"
+          icon="download"
+          (click)="downloadModel()"
+          matTooltip="Download trained model"
+        >
+          Download Model
+        </app-button>
+
+        <app-button
+          variant="secondary"
+          icon="save"
+          (click)="openSaveTemplateDialog()"
+          matTooltip="Save configuration as template"
+        >
+          Save as Template
+        </app-button>
+
+        <app-button
+          *ngIf="isActiveStatus(model.status)"
+          variant="danger"
+          icon="cancel"
+          (click)="cancelTraining()"
+          matTooltip="Cancel training and terminate pod"
+        >
+          Cancel Training
+        </app-button>
+
+        <app-button
+          variant="danger"
+          icon="delete"
+          (click)="deleteModel()"
+          matTooltip="Delete this model"
+        >
+          Delete
+        </app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Banner -->
+  <app-card *ngIf="model.status === 'failed' && model.errorMessage" class="error-banner">
+    <div class="banner-content">
+      <mat-icon class="banner-icon error">error</mat-icon>
+      <div>
+        <h3>Training Failed</h3>
+        <p>{{ model.errorMessage }}</p>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Training Progress Banner -->
+  <app-card *ngIf="isActiveStatus(model.status)" class="progress-banner">
+    <div class="banner-content">
+      <mat-spinner [diameter]="32" class="banner-spinner"></mat-spinner>
       <div>
         <h3>{{ getStatusLabel(model.status) }}</h3>
         <p *ngIf="model.status === 'training'">
@@ -56,238 +95,444 @@
         </p>
       </div>
     </div>
-  </div>
+  </app-card>
 
   <!-- Real-time Training Progress -->
-  <div class="training-progress-card" *ngIf="trainingStatus && model.status === 'training'">
-    <h2>Training Progress</h2>
+  <app-card *ngIf="trainingStatus && model.status === 'training'" class="training-progress">
+    <div class="section-header">
+      <mat-icon>trending_up</mat-icon>
+      <h2>Training Progress</h2>
+    </div>
 
-    <div class="progress-bar-container">
+    <div class="progress-bar-wrapper">
       <div class="progress-bar" [style.width.%]="trainingStatus.progressPercent || 0">
-        {{ trainingStatus.progressPercent || 0 }}%
+        <span class="progress-text">{{ trainingStatus.progressPercent || 0 }}%</span>
       </div>
     </div>
 
-    <div class="training-metrics-grid">
+    <div class="training-metrics">
       <div class="metric-item">
-        <span class="metric-label">Epoch</span>
-        <span class="metric-value">
-          {{ trainingStatus.currentEpoch || 0 }} / {{ trainingStatus.totalEpochs || model.epochs }}
-        </span>
+        <mat-icon>filter_1</mat-icon>
+        <div>
+          <span class="metric-label">Epoch</span>
+          <span class="metric-value">
+            {{ trainingStatus.currentEpoch || 0 }} / {{ trainingStatus.totalEpochs || model.epochs }}
+          </span>
+        </div>
       </div>
       <div class="metric-item">
-        <span class="metric-label">Current Loss</span>
-        <span class="metric-value">
-          {{ trainingStatus.currentLoss ? trainingStatus.currentLoss.toFixed(4) : 'N/A' }}
-        </span>
+        <mat-icon>show_chart</mat-icon>
+        <div>
+          <span class="metric-label">Current Loss</span>
+          <span class="metric-value">
+            {{ trainingStatus.currentLoss ? trainingStatus.currentLoss.toFixed(4) : 'N/A' }}
+          </span>
+        </div>
       </div>
       <div class="metric-item">
-        <span class="metric-label">Dice Score</span>
-        <span class="metric-value">
-          {{ trainingStatus.currentDiceScore ? (trainingStatus.currentDiceScore * 100).toFixed(2) + '%' : 'N/A' }}
-        </span>
+        <mat-icon>verified</mat-icon>
+        <div>
+          <span class="metric-label">Dice Score</span>
+          <span class="metric-value">
+            {{ trainingStatus.currentDiceScore ? (trainingStatus.currentDiceScore * 100).toFixed(2) + '%' : 'N/A' }}
+          </span>
+        </div>
       </div>
     </div>
-  </div>
+  </app-card>
+
+  <!-- Training History Charts (during training) -->
+  <app-card *ngIf="model.status === 'training' && trainingHistory" class="charts-card">
+    <div class="section-header">
+      <mat-icon>assessment</mat-icon>
+      <h2>Training History</h2>
+    </div>
+    <div class="charts-container">
+      <div class="chart-wrapper">
+        <canvas #lossChartCanvas></canvas>
+      </div>
+      <div class="chart-wrapper">
+        <canvas #diceChartCanvas></canvas>
+      </div>
+    </div>
+  </app-card>
 
   <!-- Main Content Grid -->
   <div class="content-grid">
     <!-- U-Net Architecture -->
-    <div class="card">
-      <h2>U-Net Architecture</h2>
+    <app-card>
+      <div class="section-header">
+        <mat-icon>account_tree</mat-icon>
+        <h2>U-Net Architecture</h2>
+      </div>
       <div class="info-grid">
         <div class="info-item">
-          <span class="label">Input Channels</span>
-          <span class="value">{{ model.inputChannels }}</span>
+          <mat-icon>input</mat-icon>
+          <div>
+            <span class="label">Input Channels</span>
+            <span class="value">{{ model.inputChannels }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Output Channels</span>
-          <span class="value">{{ model.outputChannels }}</span>
+          <mat-icon>output</mat-icon>
+          <div>
+            <span class="label">Output Channels</span>
+            <span class="value">{{ model.outputChannels }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Base Filters</span>
-          <span class="value">{{ model.baseFilters }}</span>
+          <mat-icon>tune</mat-icon>
+          <div>
+            <span class="label">Base Filters</span>
+            <span class="value">{{ model.baseFilters }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Network Depth</span>
-          <span class="value">{{ model.depth }}</span>
+          <mat-icon>layers</mat-icon>
+          <div>
+            <span class="label">Network Depth</span>
+            <span class="value">{{ model.depth }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Kernel Size</span>
-          <span class="value">{{ model.kernelSize }}&times;{{ model.kernelSize }}</span>
+          <mat-icon>grid_on</mat-icon>
+          <div>
+            <span class="label">Kernel Size</span>
+            <span class="value">{{ model.kernelSize }}&times;{{ model.kernelSize }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Convs per Block</span>
-          <span class="value">{{ model.numConvsPerBlock }}</span>
+          <mat-icon>view_module</mat-icon>
+          <div>
+            <span class="label">Convs per Block</span>
+            <span class="value">{{ model.numConvsPerBlock }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Pooling Type</span>
-          <span class="value">{{ formatPoolingType(model.poolingType) }}</span>
+          <mat-icon>compress</mat-icon>
+          <div>
+            <span class="label">Pooling Type</span>
+            <span class="value">{{ formatPoolingType(model.poolingType) }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Pooling Size</span>
-          <span class="value">{{ model.poolingSize }}&times;{{ model.poolingSize }}</span>
+          <mat-icon>photo_size_select_small</mat-icon>
+          <div>
+            <span class="label">Pooling Size</span>
+            <span class="value">{{ model.poolingSize }}&times;{{ model.poolingSize }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Upsampling Type</span>
-          <span class="value">{{ formatUpsamplingType(model.upsamplingType) }}</span>
+          <mat-icon>expand</mat-icon>
+          <div>
+            <span class="label">Upsampling Type</span>
+            <span class="value">{{ formatUpsamplingType(model.upsamplingType) }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Upsampling Size</span>
-          <span class="value">{{ model.upsamplingSize }}&times;{{ model.upsamplingSize }}</span>
+          <mat-icon>photo_size_select_large</mat-icon>
+          <div>
+            <span class="label">Upsampling Size</span>
+            <span class="value">{{ model.upsamplingSize }}&times;{{ model.upsamplingSize }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Activation</span>
-          <span class="value">{{ formatActivation(model.activation) }}</span>
+          <mat-icon>functions</mat-icon>
+          <div>
+            <span class="label">Activation</span>
+            <span class="value">{{ formatActivation(model.activation) }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Filter Multiplier</span>
-          <span class="value">&times;{{ model.filterMultiplier }}</span>
+          <mat-icon>clear</mat-icon>
+          <div>
+            <span class="label">Filter Multiplier</span>
+            <span class="value">&times;{{ model.filterMultiplier }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Dropout Rate</span>
-          <span class="value">{{ model.dropoutRate }}</span>
+          <mat-icon>opacity</mat-icon>
+          <div>
+            <span class="label">Dropout Rate</span>
+            <span class="value">{{ model.dropoutRate }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Batch Normalization</span>
-          <span class="value">{{ model.useBatchNorm ? 'Enabled' : 'Disabled' }}</span>
+          <mat-icon>{{ model.useBatchNorm ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+          <div>
+            <span class="label">Batch Normalization</span>
+            <span class="value">{{ model.useBatchNorm ? 'Enabled' : 'Disabled' }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Skip Connections</span>
-          <span class="value">{{ model.skipConnections ? 'Enabled' : 'Disabled' }}</span>
+          <mat-icon>{{ model.skipConnections ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+          <div>
+            <span class="label">Skip Connections</span>
+            <span class="value">{{ model.skipConnections ? 'Enabled' : 'Disabled' }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Training Hyperparameters -->
-    <div class="card">
-      <h2>Training Configuration</h2>
+    <!-- Training Configuration -->
+    <app-card>
+      <div class="section-header">
+        <mat-icon>settings</mat-icon>
+        <h2>Training Configuration</h2>
+      </div>
       <div class="info-grid">
-        <div class="info-item">
-          <span class="label">Epochs</span>
-          <span class="value">{{ model.epochs }}</span>
+        <div class="info-item" *ngIf="model.runpodGpuType">
+          <mat-icon>memory</mat-icon>
+          <div>
+            <span class="label">GPU Type</span>
+            <span class="value">{{ model.runpodGpuType }}</span>
+          </div>
+        </div>
+        <div class="info-item" *ngIf="model.runpodTemplateImage">
+          <mat-icon>developer_board</mat-icon>
+          <div>
+            <span class="label">Docker Template</span>
+            <span class="value">{{ model.runpodTemplateImage }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Batch Size</span>
-          <span class="value">{{ model.batchSize }}</span>
+          <mat-icon>repeat</mat-icon>
+          <div>
+            <span class="label">Epochs</span>
+            <span class="value">{{ model.epochs }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Learning Rate</span>
-          <span class="value">{{ model.learningRate }}</span>
+          <mat-icon>dynamic_feed</mat-icon>
+          <div>
+            <span class="label">Batch Size</span>
+            <span class="value">{{ model.batchSize }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Validation Split</span>
-          <span class="value">{{ (model.validationSplit * 100) }}%</span>
+          <mat-icon>speed</mat-icon>
+          <div>
+            <span class="label">Learning Rate</span>
+            <span class="value">{{ model.learningRate }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Optimizer</span>
-          <span class="value">{{ model.optimizer | uppercase }}</span>
+          <mat-icon>pie_chart</mat-icon>
+          <div>
+            <span class="label">Validation Split</span>
+            <span class="value">{{ (model.validationSplit * 100) }}%</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">Loss Function</span>
-          <span class="value">{{ model.lossFunction | uppercase }}</span>
+          <mat-icon>insights</mat-icon>
+          <div>
+            <span class="label">Optimizer</span>
+            <span class="value">{{ model.optimizer | uppercase }}</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <mat-icon>calculate</mat-icon>
+          <div>
+            <span class="label">Loss Function</span>
+            <span class="value">{{ model.lossFunction | uppercase }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </app-card>
 
     <!-- Training Metrics -->
-    <div class="card" *ngIf="model.status === 'completed'">
-      <h2>Training Metrics</h2>
+    <app-card *ngIf="model.status === 'completed'" class="metrics-card">
+      <div class="section-header">
+        <mat-icon>bar_chart</mat-icon>
+        <h2>Training Metrics</h2>
+      </div>
       <div class="metrics-grid">
         <div class="metric-card">
+          <mat-icon class="metric-icon">verified</mat-icon>
           <div class="metric-value">{{ (model.finalDiceScore! * 100).toFixed(2) }}%</div>
           <div class="metric-label">Dice Score</div>
         </div>
         <div class="metric-card">
+          <mat-icon class="metric-icon">show_chart</mat-icon>
           <div class="metric-value">{{ model.finalLoss?.toFixed(4) }}</div>
           <div class="metric-label">Final Loss</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-value">{{ formatDuration(model.trainingDurationSeconds) }}</div>
-          <div class="metric-label">Training Time</div>
-        </div>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Timestamps -->
-    <div class="card">
-      <h2>Timeline</h2>
+    <!-- Timeline -->
+    <app-card>
+      <div class="section-header">
+        <mat-icon>timeline</mat-icon>
+        <h2>Timeline</h2>
+      </div>
       <div class="timeline">
         <div class="timeline-item">
           <div class="timeline-dot"></div>
+          <div class="timeline-line"></div>
           <div class="timeline-content">
-            <span class="timeline-label">Created</span>
-            <span class="timeline-value">{{ formatDate(model.createdAt) }}</span>
+            <mat-icon>add_circle</mat-icon>
+            <div>
+              <span class="timeline-label">Created</span>
+              <span class="timeline-value">{{ formatDate(model.createdAt) }}</span>
+            </div>
           </div>
         </div>
         <div class="timeline-item" *ngIf="model.startedAt">
           <div class="timeline-dot"></div>
+          <div class="timeline-line"></div>
           <div class="timeline-content">
-            <span class="timeline-label">Training Started</span>
-            <span class="timeline-value">{{ formatDate(model.startedAt) }}</span>
+            <mat-icon>play_arrow</mat-icon>
+            <div>
+              <span class="timeline-label">Training Started</span>
+              <span class="timeline-value">{{ formatDate(model.startedAt) }}</span>
+            </div>
           </div>
         </div>
         <div class="timeline-item" *ngIf="model.completedAt">
           <div class="timeline-dot completed"></div>
           <div class="timeline-content">
-            <span class="timeline-label">Completed</span>
-            <span class="timeline-value">{{ formatDate(model.completedAt) }}</span>
+            <mat-icon>check_circle</mat-icon>
+            <div>
+              <span class="timeline-label">Completed</span>
+              <span class="timeline-value">{{ formatDate(model.completedAt) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-item" *ngIf="model.trainingDurationSeconds">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <mat-icon>timer</mat-icon>
+            <div>
+              <span class="timeline-label">Training Duration</span>
+              <span class="timeline-value">{{ formatDuration(model.trainingDurationSeconds) }}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </app-card>
 
-    <!-- Storage Info -->
-    <div class="card">
-      <h2>Storage Information</h2>
+    <!-- Storage Information -->
+    <app-card>
+      <div class="section-header">
+        <mat-icon>storage</mat-icon>
+        <h2>Storage Information</h2>
+      </div>
       <div class="info-list">
         <div class="info-item">
-          <span class="label">S3 Bucket</span>
-          <span class="value mono">{{ model.s3Bucket }}</span>
+          <mat-icon>folder</mat-icon>
+          <div>
+            <span class="label">S3 Bucket</span>
+            <span class="value mono">{{ model.s3Bucket }}</span>
+          </div>
         </div>
         <div class="info-item">
-          <span class="label">S3 Key</span>
-          <span class="value mono">{{ model.s3Key }}</span>
+          <mat-icon>vpn_key</mat-icon>
+          <div>
+            <span class="label">S3 Key</span>
+            <span class="value mono">{{ model.s3Key }}</span>
+          </div>
         </div>
         <div class="info-item" *ngIf="model.modelSizeMb">
-          <span class="label">Model Size</span>
-          <span class="value">{{ model.modelSizeMb.toFixed(2) }} MB</span>
+          <mat-icon>data_usage</mat-icon>
+          <div>
+            <span class="label">Model Size</span>
+            <span class="value">{{ model.modelSizeMb.toFixed(2) }} MB</span>
+          </div>
         </div>
       </div>
-    </div>
+    </app-card>
 
-    <!-- RunPod Info (if available) -->
-    <div class="card" *ngIf="model.runpodPodId">
-      <h2>RunPod Instance</h2>
+    <!-- RunPod Information -->
+    <app-card *ngIf="model.runpodPodId">
+      <div class="section-header">
+        <mat-icon>rocket_launch</mat-icon>
+        <h2>RunPod Instance</h2>
+      </div>
       <div class="info-list">
         <div class="info-item">
-          <span class="label">Pod ID</span>
-          <span class="value mono">{{ model.runpodPodId }}</span>
+          <mat-icon>dns</mat-icon>
+          <div>
+            <span class="label">Pod ID</span>
+            <span class="value mono">{{ model.runpodPodId }}</span>
+          </div>
         </div>
         <div class="info-item" *ngIf="model.runpodHost">
-          <span class="label">Host</span>
-          <span class="value mono">{{ model.runpodHost }}</span>
+          <mat-icon>public</mat-icon>
+          <div>
+            <span class="label">Host</span>
+            <span class="value mono">{{ model.runpodHost }}</span>
+          </div>
         </div>
         <div class="info-item" *ngIf="model.runpodPort">
-          <span class="label">Port</span>
-          <span class="value">{{ model.runpodPort }}</span>
+          <mat-icon>pin</mat-icon>
+          <div>
+            <span class="label">Port</span>
+            <span class="value">{{ model.runpodPort }}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </app-card>
+
+    <!-- Training History Charts (after completion) -->
+    <app-card *ngIf="model.status === 'completed' && trainingHistory" class="charts-card full-width">
+      <div class="section-header">
+        <mat-icon>assessment</mat-icon>
+        <h2>Training History</h2>
+      </div>
+      <div class="charts-container">
+        <div class="chart-wrapper">
+          <canvas #lossChartCanvas></canvas>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #diceChartCanvas></canvas>
+        </div>
+      </div>
+    </app-card>
+
+    <!-- U-Net Visualization -->
+    <app-card class="visualization-card full-width">
+      <div class="section-header">
+        <mat-icon>bubble_chart</mat-icon>
+        <h2>U-Net Architecture Visualization</h2>
+      </div>
+      <div class="visualization-wrapper">
+        <app-unet-visualizer
+          [inputChannels]="model.inputChannels"
+          [outputChannels]="model.outputChannels"
+          [baseFilters]="model.baseFilters"
+          [depth]="model.depth"
+          [filterMultiplier]="model.filterMultiplier"
+          [inputSize]="256"
+        ></app-unet-visualizer>
+      </div>
+    </app-card>
   </div>
 </div>
 
 <!-- Loading State -->
 <div class="loading-state" *ngIf="isLoading">
-  <div class="spinner-large"></div>
+  <mat-spinner [diameter]="64"></mat-spinner>
   <p>Loading model details...</p>
 </div>
 
 <!-- Error State -->
 <div class="error-state" *ngIf="errorMessage && !isLoading">
-  <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon-large" />
+  <mat-icon class="error-icon">error</mat-icon>
   <h2>{{ errorMessage }}</h2>
-  <button class="btn-primary" [routerLink]="['/models']">
+  <app-button variant="primary" [routerLink]="['/models']">
     Back to Models
-  </button>
+  </app-button>
 </div>
+
+<!-- Save Template Modal -->
+<app-save-template-modal
+  [show]="showSaveTemplateDialog"
+  [templateName]="newTemplateName"
+  [templateDescription]="newTemplateDescription"
+  [saving]="savingTemplate"
+  (close)="closeSaveTemplateDialog()"
+  (save)="saveAsTemplate($event)"
+  (templateNameChange)="newTemplateName = $event"
+  (templateDescriptionChange)="newTemplateDescription = $event"
+></app-save-template-modal>

@@ -1,9 +1,25 @@
-<div class="layout">
-  <app-sidebar [class.hidden]="!isSidebarOpen"></app-sidebar>
-  <main class="main-content">
-    <button class="toggle-sidebar-btn" (click)="toggleSidebar()">
-      <img [src]="isSidebarOpen ? 'assets/icons/arrows/left.svg' : 'assets/icons/arrows/right.svg'" alt="Toggle sidebar" />
-    </button>
-    <router-outlet></router-outlet>
-  </main>
+<div class="app-layout" [attr.data-theme]="currentTheme">
+  <!-- Sidebar -->
+  <app-sidebar
+    [collapsed]="sidebarCollapsed"
+    [currentTheme]="currentTheme"
+  ></app-sidebar>
+
+  <!-- Main content area -->
+  <div class="layout-main" [class.sidebar-collapsed]="sidebarCollapsed">
+    <!-- Topbar -->
+    <app-topbar
+      [currentTheme]="currentTheme"
+      (themeToggle)="toggleTheme()"
+      (sidebarToggle)="toggleSidebar()"
+    ></app-topbar>
+
+    <!-- Page content with breadcrumbs -->
+    <main class="page-content">
+      <div class="content-wrapper">
+        <app-breadcrumbs></app-breadcrumbs>
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
 </div>

@@ -1,13 +1,32 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatButtonModule } from '@angular/material/button';
 import { ModelService } from '@services/model.service';
 import { Model } from '@interfaces/model.interface';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-models',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatButtonModule,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent,
+    EmptyStateComponent,
+    SkeletonComponent
+  ],
   templateUrl: './models.component.html',
   styleUrls: ['./models.component.scss']
 })
@@ -17,6 +36,8 @@ export class ModelsComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
   selectedStatus: string = 'all';
+  selectedModelIds: Set<number> = new Set();
+  isSelectionMode = false;
 
   constructor(
     private modelService: ModelService,
@@ -140,5 +161,71 @@ export class ModelsComponent implements OnInit {
       return this.models.length;
     }
     return this.models.filter((m) => m.status === status).length;
+  }
+
+  toggleSelectionMode(): void {
+    this.isSelectionMode = !this.isSelectionMode;
+    if (!this.isSelectionMode) {
+      this.selectedModelIds.clear();
+    }
+  }
+
+  toggleModelSelection(modelId: number, event: Event): void {
+    event.stopPropagation();
+    if (this.selectedModelIds.has(modelId)) {
+      this.selectedModelIds.delete(modelId);
+    } else {
+      this.selectedModelIds.add(modelId);
+    }
+  }
+
+  isModelSelected(modelId: number): boolean {
+    return this.selectedModelIds.has(modelId);
+  }
+
+  selectAll(): void {
+    this.filteredModels.forEach((model) => this.selectedModelIds.add(model.id));
+  }
+
+  deselectAll(): void {
+    this.selectedModelIds.clear();
+  }
+
+  bulkDelete(): void {
+    if (this.selectedModelIds.size === 0) {
+      alert('Please select models to delete');
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to delete ${this.selectedModelIds.size} model(s)? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    const idsArray = Array.from(this.selectedModelIds);
+
+    this.modelService.bulkDeleteModels(idsArray).subscribe({
+      next: (result) => {
+        this.models = this.models.filter((m) => !idsArray.includes(m.id));
+        this.filterModels();
+        this.selectedModelIds.clear();
+        this.isSelectionMode = false;
+
+        if (result.failed.length > 0) {
+          alert(
+            `Deleted ${result.deleted} model(s). Failed to delete ${result.failed.length} model(s).`
+          );
+        } else {
+          alert(`Successfully deleted ${result.deleted} model(s)`);
+        }
+      },
+      error: (error) => {
+        console.error('Error bulk deleting models:', error);
+        alert('Failed to delete models');
+      }
+    });
   }
 }

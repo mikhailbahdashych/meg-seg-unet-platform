@@ -3,7 +3,11 @@ import {
   S3Client,
   ListObjectsV2Command,
   DeleteObjectsCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  CreateBucketCommandInput,
+  BucketLocationConstraint
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -182,6 +186,60 @@ export class S3Service {
     }
   }
 
+  async downloadFileAsString(s3Key: string): Promise<string> {
+    await this.ensureInitialized();
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName!,
+        Key: s3Key
+      });
+
+      const response = await this.s3Client!.send(command);
+      const stream = response.Body;
+
+      // Convert stream to string
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as any) {
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks).toString('utf-8');
+    } catch (error) {
+      throw new UploadException(`Failed to download file from S3: ${error.message}`);
+    }
+  }
+
+  async downloadFileToDisk(s3Key: string, localPath: string): Promise<void> {
+    await this.ensureInitialized();
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName!,
+        Key: s3Key
+      });
+
+      const response = await this.s3Client!.send(command);
+      const stream = response.Body as any;
+
+      // Create directory if it doesn't exist
+      const dir = path.dirname(localPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      // Write stream to file
+      const writeStream = fs.createWriteStream(localPath);
+
+      return new Promise((resolve, reject) => {
+        stream.pipe(writeStream);
+        writeStream.on('finish', resolve);
+        writeStream.on('error', reject);
+      });
+    } catch (error) {
+      throw new UploadException(`Failed to download file from S3: ${error.message}`);
+    }
+  }
+
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
       await this.ensureInitialized();
@@ -197,6 +255,65 @@ export class S3Service {
       return {
         success: false,
         error: error.message || 'Failed to connect to S3'
+      };
+    }
+  }
+
+  async ensureBucketExists(
+    bucketName: string,
+    region: string
+  ): Promise<{ exists: boolean; created: boolean; error?: string }> {
+    try {
+      await this.ensureInitialized();
+
+      // Check if bucket exists
+      try {
+        const headCommand = new HeadBucketCommand({
+          Bucket: bucketName
+        });
+        await this.s3Client!.send(headCommand);
+        return { exists: true, created: false };
+      } catch (error) {
+        // Bucket doesn't exist or access denied
+        if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+          // Try to create the bucket
+          try {
+            const createParams: CreateBucketCommandInput = {
+              Bucket: bucketName
+            };
+
+            // For regions other than us-east-1, specify LocationConstraint
+            if (region && region !== 'us-east-1') {
+              createParams.CreateBucketConfiguration = {
+                LocationConstraint: region as BucketLocationConstraint
+              };
+            }
+
+            const createCommand = new CreateBucketCommand(createParams);
+            await this.s3Client!.send(createCommand);
+
+            return { exists: true, created: true };
+          } catch (createError) {
+            return {
+              exists: false,
+              created: false,
+              error: `Failed to create bucket: ${createError.message}`
+            };
+          }
+        } else {
+          // Access denied or other error
+          return {
+            exists: false,
+            created: false,
+            error: `Cannot access bucket: ${error.message}`
+          };
+        }
+      }
+    } catch (error) {
+      return {
+        exists: false,
+        created: false,
+        error: error.message || 'Failed to check/create bucket'
       };
     }
   }

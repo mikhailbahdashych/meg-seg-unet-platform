@@ -2,16 +2,44 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSliderModule } from '@angular/material/slider';
 import { DatasetService } from '@services/dataset.service';
 import { ModelService } from '@services/model.service';
 import { SettingsService } from '@services/settings.service';
 import { TrainingService, GpuType } from '@services/training.service';
+import { ModelTemplateService } from '@services/model-template.service';
+import { NotificationService } from '@shared/services/notification.service';
 import { Dataset } from '@interfaces/dataset.interface';
+import { Template } from '@interfaces/template.interface';
+import { ModelTemplate } from '@interfaces/model-template.interface';
+import { SaveTemplateModalComponent } from '../../components/save-template-modal/save-template-modal.component';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-train',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatExpansionModule,
+    MatSliderModule,
+    SaveTemplateModalComponent,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent,
+    EmptyStateComponent,
+    SkeletonComponent
+  ],
   templateUrl: './train.component.html',
   styleUrls: ['./train.component.scss']
 })
@@ -31,14 +59,35 @@ export class TrainComponent implements OnInit {
   selectedGpuType: string = '';
   loadingGpuTypes = false;
 
+  // Template Selection
+  templates: Template[] = [];
+  selectedTemplate: Template | null = null;
+  loadingTemplates = false;
+
+  // Template Filters
+  templateFilters = {
+    includeRunpodTemplates: true,
+    includePublicTemplates: false,
+    includeEndpointBoundTemplates: false
+  };
+
+  // Model Templates
+  modelTemplates: ModelTemplate[] = [];
+  selectedModelTemplate: ModelTemplate | null = null;
+  loadingModelTemplates = false;
+  showSaveTemplateDialog = false;
+  newTemplateName = '';
+  newTemplateDescription = '';
+  savingTemplate = false;
+
   showAdvancedArchitecture = false;
 
-  // U-Net Architecture - Basic
+  // U-Net Architecture - Basic (Optimized for demo: fast training ~5-10 min)
   architecture = {
-    inputChannels: 3,
+    inputChannels: 1, // Grayscale (Chest X-Rays)
     outputChannels: 1,
-    baseFilters: 64,
-    depth: 4
+    baseFilters: 32, // Smaller model = faster training
+    depth: 3 // Fewer layers = faster training
   };
 
   // U-Net Architecture - Advanced
@@ -56,10 +105,10 @@ export class TrainComponent implements OnInit {
     filterMultiplier: 2
   };
 
-  // Training Hyperparameters
+  // Training Hyperparameters (Optimized for demo: fast training)
   training = {
-    epochs: 50,
-    batchSize: 4,
+    epochs: 20, // Faster convergence on small dataset
+    batchSize: 8, // Better GPU utilization
     learningRate: 0.001,
     optimizer: 'adam' as 'adam' | 'sgd' | 'rmsprop',
     lossFunction: 'dice' as 'dice' | 'bce' | 'focal' | 'combined',
@@ -71,12 +120,16 @@ export class TrainComponent implements OnInit {
     private modelService: ModelService,
     private settingsService: SettingsService,
     private trainingService: TrainingService,
+    private modelTemplateService: ModelTemplateService,
+    private notificationService: NotificationService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.checkCredentials();
     this.loadGpuTypes();
+    this.loadTemplates();
+    this.loadModelTemplates();
   }
 
   checkCredentials(): void {
@@ -129,6 +182,38 @@ export class TrainComponent implements OnInit {
     });
   }
 
+  loadTemplates(): void {
+    this.loadingTemplates = true;
+    this.trainingService
+      .getTemplates(
+        this.templateFilters.includeRunpodTemplates,
+        this.templateFilters.includePublicTemplates,
+        this.templateFilters.includeEndpointBoundTemplates
+      )
+      .subscribe({
+        next: (templates) => {
+          this.templates = templates;
+          // Pre-select first template if available
+          if (templates.length > 0) {
+            this.selectedTemplate = templates[0];
+          }
+          this.loadingTemplates = false;
+        },
+        error: (error) => {
+          console.error('Error loading templates:', error);
+          this.loadingTemplates = false;
+        }
+      });
+  }
+
+  onTemplateFilterChange(): void {
+    this.loadTemplates();
+  }
+
+  compareTemplates(t1: Template | null, t2: Template | null): boolean {
+    return t1?.id === t2?.id;
+  }
+
   canStartTraining(): boolean {
     return (
       this.selectedDatasetId !== null &&
@@ -150,6 +235,8 @@ export class TrainComponent implements OnInit {
       name: this.modelName.trim(),
       datasetId: this.selectedDatasetId,
       gpuTypeId: this.selectedGpuType,
+      // Template selection
+      templateImageName: this.selectedTemplate?.imageName,
       // Basic architecture
       inputChannels: this.architecture.inputChannels,
       outputChannels: this.architecture.outputChannels,
@@ -192,5 +279,97 @@ export class TrainComponent implements OnInit {
   getSelectedDatasetName(): string {
     const dataset = this.datasets.find((d) => d.id === this.selectedDatasetId);
     return dataset ? dataset.name : 'None selected';
+  }
+
+  loadModelTemplates(): void {
+    this.loadingModelTemplates = true;
+    this.modelTemplateService.getAllTemplates().subscribe({
+      next: (templates) => {
+        this.modelTemplates = templates;
+        this.loadingModelTemplates = false;
+      },
+      error: (error) => {
+        console.error('Error loading model templates:', error);
+        this.loadingModelTemplates = false;
+      }
+    });
+  }
+
+  onModelTemplateChange(): void {
+    if (this.selectedModelTemplate) {
+      this.applyModelTemplate(this.selectedModelTemplate);
+    }
+  }
+
+  applyModelTemplate(template: ModelTemplate): void {
+    // Apply architecture settings
+    this.architecture = {
+      inputChannels: template.inputChannels,
+      outputChannels: template.outputChannels,
+      baseFilters: template.baseFilters,
+      depth: template.depth
+    };
+
+    // Apply advanced architecture settings
+    this.advancedArchitecture = {
+      kernelSize: template.kernelSize,
+      numConvsPerBlock: template.numConvsPerBlock,
+      poolingType: template.poolingType,
+      poolingSize: template.poolingSize,
+      upsamplingType: template.upsamplingType,
+      upsamplingSize: template.upsamplingSize,
+      useBatchNorm: template.useBatchNorm,
+      activation: template.activation,
+      dropoutRate: template.dropoutRate,
+      skipConnections: template.skipConnections,
+      filterMultiplier: template.filterMultiplier
+    };
+
+    // Apply training hyperparameters
+    this.training = {
+      epochs: template.epochs,
+      batchSize: template.batchSize,
+      learningRate: template.learningRate,
+      optimizer: template.optimizer,
+      lossFunction: template.lossFunction,
+      validationSplit: template.validationSplit
+    };
+  }
+
+  openSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = true;
+    this.newTemplateName = '';
+    this.newTemplateDescription = '';
+  }
+
+  closeSaveTemplateDialog(): void {
+    this.showSaveTemplateDialog = false;
+  }
+
+  saveAsTemplate(data: { name: string; description: string }): void {
+    this.savingTemplate = true;
+
+    const templateData = {
+      name: data.name,
+      description: data.description || undefined,
+      ...this.architecture,
+      ...this.advancedArchitecture,
+      ...this.training
+    };
+
+    this.modelTemplateService.createTemplate(templateData).subscribe({
+      next: (template) => {
+        console.log('Template saved:', template);
+        this.savingTemplate = false;
+        this.closeSaveTemplateDialog();
+        this.loadModelTemplates();
+        alert(`Template "${template.name}" saved successfully!`);
+      },
+      error: (error) => {
+        console.error('Error saving template:', error);
+        this.savingTemplate = false;
+        alert('Failed to save template');
+      }
+    });
   }
 }

@@ -1,14 +1,38 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonModule } from '@angular/material/button';
 import { Dataset } from '@interfaces/dataset.interface';
 import { DatasetService } from '@shared/services/dataset.service';
 import { SettingsService } from '@services/settings.service';
+import { NotificationService } from '@shared/services/notification.service';
+import { ButtonComponent } from '@shared/components/button/button.component';
+import { CardComponent } from '@shared/components/card/card.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonComponent } from '@shared/components/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-upload',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule,
+    MatButtonModule,
+    ButtonComponent,
+    CardComponent,
+    BadgeComponent,
+    EmptyStateComponent,
+    SkeletonComponent
+  ],
   templateUrl: './upload.component.html',
   styleUrls: ['./upload.component.scss']
 })
@@ -29,7 +53,8 @@ export class UploadComponent implements OnInit {
 
   constructor(
     private datasetService: DatasetService,
-    private settingsService: SettingsService
+    private settingsService: SettingsService,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
@@ -90,6 +115,13 @@ export class UploadComponent implements OnInit {
     }
   }
 
+  triggerFileInput(): void {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
@@ -99,17 +131,11 @@ export class UploadComponent implements OnInit {
 
   selectFile(file: File): void {
     if (!file.name.endsWith('.zip')) {
-      alert('Please upload a ZIP file');
+      this.notificationService.error('Please upload a ZIP file');
       return;
     }
     this.selectedFile = file;
-  }
-
-  onNameChange(): void {
-    const nameInput = document.getElementById(
-      'dataset-name'
-    ) as HTMLInputElement;
-    this.datasetName = nameInput?.value?.trim() || '';
+    this.notificationService.info(`Selected: ${file.name}`);
   }
 
   canUpload(): boolean {
@@ -131,13 +157,16 @@ export class UploadComponent implements OnInit {
           this.isUploading = false;
           this.resetForm();
           this.loadDatasets();
+          this.notificationService.success(
+            `Dataset "${dataset.name}" uploaded successfully`
+          );
         },
         error: (error) => {
           console.error('Upload failed:', error);
           this.isUploading = false;
           const errorMessage =
             error.error?.message || 'Upload failed. Please try again.';
-          alert(`Error: ${errorMessage}`);
+          this.notificationService.error(errorMessage);
         }
       });
   }
@@ -145,11 +174,7 @@ export class UploadComponent implements OnInit {
   resetForm(): void {
     this.selectedFile = null;
     this.datasetName = '';
-    const nameInput = document.getElementById(
-      'dataset-name'
-    ) as HTMLInputElement;
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
-    if (nameInput) nameInput.value = '';
     if (fileInput) fileInput.value = '';
   }
 
@@ -173,7 +198,7 @@ export class UploadComponent implements OnInit {
 
     const trimmedName = inputElement.value.trim();
     if (!trimmedName || trimmedName.length === 0) {
-      alert('Dataset name cannot be empty');
+      this.notificationService.error('Dataset name cannot be empty');
       return;
     }
 
@@ -182,12 +207,13 @@ export class UploadComponent implements OnInit {
         console.log('Dataset renamed successfully:', updatedDataset);
         this.editingDatasetId = null;
         this.loadDatasets();
+        this.notificationService.success('Dataset renamed successfully');
       },
       error: (error) => {
         console.error('Failed to rename dataset:', error);
         const errorMessage =
           error.error?.message || 'Failed to rename dataset. Please try again.';
-        alert(`Error: ${errorMessage}`);
+        this.notificationService.error(errorMessage);
       }
     });
   }
@@ -212,13 +238,14 @@ export class UploadComponent implements OnInit {
         console.log('Dataset deleted successfully');
         this.isDeletingId = null;
         this.loadDatasets();
+        this.notificationService.success('Dataset deleted successfully');
       },
       error: (error) => {
         console.error('Failed to delete dataset:', error);
         this.isDeletingId = null;
         const errorMessage =
           error.error?.message || 'Failed to delete dataset. Please try again.';
-        alert(`Error: ${errorMessage}`);
+        this.notificationService.error(errorMessage);
       }
     });
   }

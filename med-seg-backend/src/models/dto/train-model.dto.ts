@@ -2,12 +2,15 @@ export class TrainModelDto {
   name: string;
   datasetId: number;
   gpuTypeId: string; // RunPod GPU type identifier (e.g., "NVIDIA RTX A6000")
+  templateId?: string; // Optional RunPod template ID
+  templateImageName?: string; // Optional custom image name (overrides template)
 
   // U-Net Architecture - Basic (optional - will use defaults if not provided)
-  inputChannels?: number; // default: 3
+  // Defaults optimized for demo: fast training (~5-10 min on Chest X-Rays)
+  inputChannels?: number; // default: 1 (grayscale)
   outputChannels?: number; // default: 1
-  baseFilters?: number; // default: 64
-  depth?: number; // default: 4
+  baseFilters?: number; // default: 32 (faster)
+  depth?: number; // default: 3 (faster)
 
   // U-Net Architecture - Advanced (optional - will use defaults if not provided)
   kernelSize?: number; // default: 3
@@ -23,8 +26,8 @@ export class TrainModelDto {
   filterMultiplier?: number; // default: 2
 
   // Training Hyperparameters (optional - will use defaults if not provided)
-  epochs?: number; // default: 50
-  batchSize?: number; // default: 4
+  epochs?: number; // default: 20 (faster)
+  batchSize?: number; // default: 8 (faster)
   learningRate?: number; // default: 0.001
   optimizer?: 'adam' | 'sgd' | 'rmsprop'; // default: 'adam'
   lossFunction?: 'dice' | 'bce' | 'focal' | 'combined'; // default: 'dice'

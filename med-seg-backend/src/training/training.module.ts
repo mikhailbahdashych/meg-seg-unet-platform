@@ -12,6 +12,7 @@ import { PodSshService } from './services/pod-ssh.service';
 import { TrainingBundleService } from './services/training-bundle.service';
 import { RunPodOrchestratorService } from './services/runpod-orchestrator.service';
 import { TrainingMonitorService } from './services/training-monitor.service';
+import { RunPodTemplatesService } from './services/runpod-templates.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 
@@ -29,7 +30,8 @@ import { Repository, In } from 'typeorm';
     PodSshService,
     TrainingBundleService,
     RunPodOrchestratorService,
-    TrainingMonitorService
+    TrainingMonitorService,
+    RunPodTemplatesService
   ],
   exports: [RunPodOrchestratorService]
 })

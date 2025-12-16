@@ -89,11 +89,11 @@ export class ModelsService {
       s3Bucket: this.apiConfigService.awsS3BucketName,
       s3Key: s3Key,
 
-      // U-Net architecture - Basic
-      inputChannels: trainModelDto.inputChannels || 3,
+      // U-Net architecture - Basic (demo-optimized defaults)
+      inputChannels: trainModelDto.inputChannels || 1,
       outputChannels: trainModelDto.outputChannels || 1,
-      baseFilters: trainModelDto.baseFilters || 64,
-      depth: trainModelDto.depth || 4,
+      baseFilters: trainModelDto.baseFilters || 32,
+      depth: trainModelDto.depth || 3,
 
       // U-Net architecture - Advanced
       kernelSize: trainModelDto.kernelSize || 3,
@@ -112,9 +112,9 @@ export class ModelsService {
           : true,
       filterMultiplier: trainModelDto.filterMultiplier || 2,
 
-      // Training hyperparameters
-      epochs: trainModelDto.epochs || 50,
-      batchSize: trainModelDto.batchSize || 4,
+      // Training hyperparameters (demo-optimized defaults)
+      epochs: trainModelDto.epochs || 20,
+      batchSize: trainModelDto.batchSize || 8,
       learningRate: trainModelDto.learningRate || 0.001,
       optimizer: trainModelDto.optimizer || 'adam',
       lossFunction: trainModelDto.lossFunction || 'dice',
@@ -127,7 +127,12 @@ export class ModelsService {
 
     // START TRAINING ON RUNPOD (async - don't wait)
     this.runpodOrchestratorService
-      .startTraining(savedModel, dataset, trainModelDto.gpuTypeId)
+      .startTraining(
+        savedModel,
+        dataset,
+        trainModelDto.gpuTypeId,
+        trainModelDto.templateImageName
+      )
       .catch((error) => {
         console.error(`Failed to start training for model ${savedModel.id}:`, error);
         this.updateStatus(savedModel.id, 'failed', error.message);
@@ -186,6 +191,70 @@ export class ModelsService {
     return url;
   }
 
+  async getTrainingHistory(id: number): Promise<any> {
+    const model = await this.findOne(id);
+
+    // If model is currently training, fetch history from the pod
+    if (['provisioning', 'training', 'uploading'].includes(model.status)) {
+      try {
+        const history = await this.runpodOrchestratorService.getTrainingHistory(id);
+        return history;
+      } catch (error) {
+        console.error(
+          `Error fetching training history from pod for model ${id}:`,
+          error
+        );
+        throw new NotFoundException('Training history not yet available');
+      }
+    }
+
+    // If model is completed, fetch history from S3
+    if (model.status === 'completed') {
+      const historyS3Key = model.s3Key.replace('.pth', '_history.json');
+
+      try {
+        // Download training history JSON from S3
+        const historyData = await this.s3Service.downloadFileAsString(historyS3Key);
+        return JSON.parse(historyData);
+      } catch (error) {
+        console.error(
+          `Error fetching training history from S3 for model ${id}:`,
+          error
+        );
+        throw new NotFoundException('Training history not found');
+      }
+    }
+
+    throw new BadRequestException(
+      `Training history is not available for models with status: ${model.status}`
+    );
+  }
+
+  async cancelTraining(id: number): Promise<Model> {
+    const model = await this.findOne(id);
+
+    // Only cancel if training is in progress
+    if (!['provisioning', 'training', 'uploading'].includes(model.status)) {
+      throw new BadRequestException(
+        `Cannot cancel training. Model status is '${model.status}'`
+      );
+    }
+
+    // Terminate the RunPod pod
+    if (model.runpodPodId) {
+      try {
+        await this.runpodOrchestratorService.terminatePod(id);
+        console.log(`Terminated RunPod pod ${model.runpodPodId} for model ${id}`);
+      } catch (error) {
+        console.error('Error terminating RunPod pod:', error);
+        // Continue with status update even if pod termination fails
+      }
+    }
+
+    // Update status to cancelled
+    return this.updateStatus(id, 'cancelled', 'Training cancelled by user');
+  }
+
   async delete(id: number): Promise<void> {
     const model = await this.findOne(id);
 
@@ -216,6 +285,26 @@ export class ModelsService {
 
     // Delete from database
     await this.modelsRepository.remove(model);
+  }
+
+  async bulkDelete(ids: number[]): Promise<{ deleted: number; failed: number[] }> {
+    const failedIds: number[] = [];
+    let deletedCount = 0;
+
+    for (const id of ids) {
+      try {
+        await this.delete(id);
+        deletedCount++;
+      } catch (error) {
+        console.error(`Failed to delete model ${id}:`, error.message);
+        failedIds.push(id);
+      }
+    }
+
+    return {
+      deleted: deletedCount,
+      failed: failedIds
+    };
   }
 
   async getTrainingStatus(id: number): Promise<any> {

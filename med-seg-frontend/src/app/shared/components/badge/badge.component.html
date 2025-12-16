@@ -1,0 +1,5 @@
+<span [class]="'badge badge-' + variant">
+  <span *ngIf="dot" class="badge-dot"></span>
+  <mat-icon *ngIf="icon" class="badge-icon">{{ icon }}</mat-icon>
+  <span class="badge-text"><ng-content></ng-content></span>
+</span>

@@ -1,0 +1,14 @@
+<div [class]="'card' + (glass ? ' card-glass' : '') + (hover ? ' card-hover' : '')">
+  <div class="card-header" *ngIf="title">
+    <h3 class="card-title">{{ title }}</h3>
+    <div class="card-actions">
+      <ng-content select="[card-actions]"></ng-content>
+    </div>
+  </div>
+  <div class="card-body">
+    <ng-content></ng-content>
+  </div>
+  <div class="card-footer" *ngIf="hasFooter">
+    <ng-content select="[card-footer]"></ng-content>
+  </div>
+</div>

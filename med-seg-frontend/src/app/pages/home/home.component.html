@@ -1,24 +1,104 @@
 <div class="home-page">
-  <h1>Welcome to MedSeg Platform</h1>
-  <p class="subtitle">U-Net Medical Image Segmentation</p>
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <app-badge variant="info" icon="science">AI-Powered Medical Imaging</app-badge>
+      </div>
+      <h1 class="hero-title">
+        Welcome to <span class="gradient-text">MedSeg Platform</span>
+      </h1>
+      <p class="hero-description">
+        Advanced U-Net architecture for precise medical image segmentation.
+        Train custom models, analyze datasets, and perform automated inference with state-of-the-art deep learning.
+      </p>
+      <div class="hero-actions">
+        <app-button variant="primary" size="lg" icon="cloud_upload" [routerLink]="['/upload']">
+          Upload Dataset
+        </app-button>
+        <app-button variant="secondary" size="lg" icon="model_training" [routerLink]="['/train']">
+          Train Model
+        </app-button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="visual-card">
+        <mat-icon class="visual-icon">psychology</mat-icon>
+        <div class="visual-pulse"></div>
+      </div>
+    </div>
+  </section>
 
-  <div class="features">
-    <div class="feature-card" [routerLink]="['/upload']">
-      <img src="assets/icons/emojis/upload.png" alt="Upload" class="feature-icon" />
-      <h3>Upload Dataset</h3>
-      <p>Upload medical image datasets for training</p>
+  <!-- Stats Section -->
+  <section class="stats-section">
+    <div class="stats-grid">
+      <app-card *ngFor="let stat of stats" [glass]="true" class="stat-card">
+        <div class="stat-content">
+          <div class="stat-header">
+            <mat-icon class="stat-icon">{{ stat.icon }}</mat-icon>
+            <span class="stat-trend" [class.positive]="stat.trend?.startsWith('+')">
+              {{ stat.trend }}
+            </span>
+          </div>
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-label">{{ stat.label }}</div>
+        </div>
+      </app-card>
+    </div>
+  </section>
+
+  <!-- Quick Actions Section -->
+  <section class="actions-section">
+    <div class="section-header">
+      <h2>Quick Actions</h2>
+      <p>Get started with your medical image segmentation workflow</p>
     </div>
 
-    <div class="feature-card" [routerLink]="['/train']">
-      <img src="assets/icons/emojis/brain.png" alt="Train" class="feature-icon" />
-      <h3>Train Model</h3>
-      <p>Configure and train U-Net models</p>
+    <div class="actions-grid">
+      <app-card
+        *ngFor="let action of quickActions"
+        [hover]="true"
+        class="action-card"
+        [routerLink]="[action.route]">
+        <div class="action-content">
+          <div class="action-icon-wrapper" [style.background]="action.color">
+            <mat-icon class="action-icon">{{ action.icon }}</mat-icon>
+          </div>
+          <h3 class="action-title">{{ action.title }}</h3>
+          <p class="action-description">{{ action.description }}</p>
+          <div class="action-arrow">
+            <mat-icon>arrow_forward</mat-icon>
+          </div>
+        </div>
+      </app-card>
     </div>
+  </section>
 
-    <div class="feature-card" [routerLink]="['/models']">
-      <img src="assets/icons/emojis/chart.png" alt="Models" class="feature-icon" />
-      <h3>My Models</h3>
-      <p>View and manage trained models</p>
-    </div>
-  </div>
+  <!-- Features Highlight -->
+  <section class="features-section">
+    <app-card [glass]="true" class="features-card">
+      <div class="features-grid">
+        <div class="feature-item">
+          <mat-icon class="feature-icon">speed</mat-icon>
+          <h4>High Performance</h4>
+          <p>Optimized U-Net architecture for fast training and inference</p>
+        </div>
+        <div class="feature-item">
+          <mat-icon class="feature-icon">insights</mat-icon>
+          <h4>Real-time Monitoring</h4>
+          <p>Track training metrics and visualize model performance live</p>
+        </div>
+        <div class="feature-item">
+          <mat-icon class="feature-icon">architecture</mat-icon>
+          <h4>Model Templates</h4>
+          <p>Save and reuse training configurations across datasets</p>
+        </div>
+        <div class="feature-item">
+          <mat-icon class="feature-icon">batch_prediction</mat-icon>
+          <h4>Batch Processing</h4>
+          <p>Process multiple images simultaneously for efficient workflows</p>
+        </div>
+      </div>
+    </app-card>
+  </section>
 </div>

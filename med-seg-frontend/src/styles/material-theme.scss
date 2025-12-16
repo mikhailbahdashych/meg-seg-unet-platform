@@ -1,0 +1,136 @@
+// Angular Material Theme Customization - MedSeg Platform
+
+@use '@angular/material' as mat;
+
+// Include Material core styles (only once per application)
+@include mat.core();
+
+// Define custom palettes based on design tokens
+$primary-palette: mat.define-palette(mat.$indigo-palette, 600, 400, 800);
+$accent-palette: mat.define-palette(mat.$pink-palette, 500, 300, 700);
+$warn-palette: mat.define-palette(mat.$red-palette, 500, 300, 700);
+
+// Create light theme
+$light-theme: mat.define-light-theme((
+  color: (
+    primary: $primary-palette,
+    accent: $accent-palette,
+    warn: $warn-palette,
+  ),
+  typography: mat.define-typography-config(
+    $font-family: var(--font-sans),
+  ),
+  density: 0,
+));
+
+// Create dark theme
+$dark-theme: mat.define-dark-theme((
+  color: (
+    primary: $primary-palette,
+    accent: $accent-palette,
+    warn: $warn-palette,
+  ),
+  typography: mat.define-typography-config(
+    $font-family: var(--font-sans),
+  ),
+  density: 0,
+));
+
+// Apply light theme by default
+@include mat.all-component-themes($light-theme);
+
+// Apply dark theme when [data-theme="dark"]
+[data-theme="dark"] {
+  @include mat.all-component-colors($dark-theme);
+}
+
+// ============================================================================
+// CUSTOM MATERIAL COMPONENT OVERRIDES
+// ============================================================================
+
+// Buttons
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-flat-button,
+.mat-mdc-stroked-button {
+  border-radius: var(--radius-md) !important;
+  font-weight: var(--font-weight-medium) !important;
+}
+
+// Cards
+.mat-mdc-card {
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+// Dialogs
+.mat-mdc-dialog-container {
+  border-radius: var(--radius-xl) !important;
+}
+
+// Form fields
+.mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: var(--radius-md) !important;
+  }
+}
+
+// Chips
+.mat-mdc-chip {
+  border-radius: var(--radius-md) !important;
+}
+
+// Tabs
+.mat-mdc-tab {
+  font-weight: var(--font-weight-medium) !important;
+}
+
+// Snackbar
+.mat-mdc-snack-bar-container {
+  border-radius: var(--radius-lg) !important;
+
+  &.custom-snackbar {
+    .mdc-snackbar__surface {
+      border-radius: var(--radius-lg) !important;
+    }
+
+    &.snackbar-success {
+      --mdc-snackbar-container-color: var(--color-success);
+    }
+
+    &.snackbar-error {
+      --mdc-snackbar-container-color: var(--color-error);
+    }
+
+    &.snackbar-info {
+      --mdc-snackbar-container-color: var(--color-info);
+    }
+
+    &.snackbar-warning {
+      --mdc-snackbar-container-color: var(--color-warning);
+    }
+  }
+}
+
+// Progress bar
+.mat-mdc-progress-bar {
+  border-radius: var(--radius-full) !important;
+}
+
+// Menus
+.mat-mdc-menu-panel {
+  border-radius: var(--radius-lg) !important;
+}
+
+// Tables
+.mat-mdc-table {
+  background: var(--color-surface);
+
+  .mat-mdc-header-row {
+    background: var(--color-surface-hover);
+  }
+
+  .mat-mdc-row:hover {
+    background: var(--color-surface-hover);
+  }
+}

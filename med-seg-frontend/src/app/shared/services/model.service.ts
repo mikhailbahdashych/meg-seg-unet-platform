@@ -36,11 +36,28 @@ export class ModelService {
     return this.http.get<{ url: string }>(`${this.apiUrl}/${id}/download`);
   }
 
+  getTrainingHistory(id: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${id}/training-history`);
+  }
+
+  cancelTraining(id: number): Observable<Model> {
+    return this.http.post<Model>(`${this.apiUrl}/${id}/cancel`, {});
+  }
+
   updateModel(id: number, updates: Partial<Model>): Observable<Model> {
     return this.http.put<Model>(`${this.apiUrl}/${id}`, updates);
   }
 
   deleteModel(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  bulkDeleteModels(
+    ids: number[]
+  ): Observable<{ deleted: number; failed: number[] }> {
+    return this.http.post<{ deleted: number; failed: number[] }>(
+      `${this.apiUrl}/bulk-delete`,
+      { ids }
+    );
   }
 }

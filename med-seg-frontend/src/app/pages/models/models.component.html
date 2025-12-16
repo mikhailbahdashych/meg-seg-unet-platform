@@ -1,141 +1,195 @@
-<div class="models-container">
-  <div class="models-header">
-    <div>
-      <h1>My Models</h1>
-      <p class="subtitle">View and manage your trained U-Net models</p>
+<div class="models-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div>
+        <h1>My Models</h1>
+        <p class="subtitle">View and manage your trained U-Net models</p>
+      </div>
+      <app-button variant="primary" icon="add" [routerLink]="['/train']">
+        Train New Model
+      </app-button>
     </div>
-    <button class="btn-primary" [routerLink]="['/train']">
-      <span class="icon">+</span>
-      Train New Model
-    </button>
   </div>
 
-  <!-- Status Filter -->
-  <div class="filter-bar">
+  <!-- Filter Tabs -->
+  <div class="filter-section">
     <div class="filter-tabs">
       <button
         class="filter-tab"
         [class.active]="selectedStatus === 'all'"
-        (click)="onStatusFilterChange('all')"
-      >
-        All <span class="count">{{ getModelCount('all') }}</span>
+        (click)="onStatusFilterChange('all')">
+        <span>All</span>
+        <app-badge variant="neutral">{{ getModelCount('all') }}</app-badge>
       </button>
       <button
         class="filter-tab"
         [class.active]="selectedStatus === 'completed'"
-        (click)="onStatusFilterChange('completed')"
-      >
-        Completed <span class="count">{{ getModelCount('completed') }}</span>
+        (click)="onStatusFilterChange('completed')">
+        <span>Completed</span>
+        <app-badge variant="success">{{ getModelCount('completed') }}</app-badge>
       </button>
       <button
         class="filter-tab"
         [class.active]="selectedStatus === 'training'"
-        (click)="onStatusFilterChange('training')"
-      >
-        Training <span class="count">{{ getModelCount('training') }}</span>
+        (click)="onStatusFilterChange('training')">
+        <span>Training</span>
+        <app-badge variant="info">{{ getModelCount('training') }}</app-badge>
       </button>
       <button
         class="filter-tab"
         [class.active]="selectedStatus === 'failed'"
-        (click)="onStatusFilterChange('failed')"
-      >
-        Failed <span class="count">{{ getModelCount('failed') }}</span>
+        (click)="onStatusFilterChange('failed')">
+        <span>Failed</span>
+        <app-badge variant="error">{{ getModelCount('failed') }}</app-badge>
       </button>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions" *ngIf="!isLoading && filteredModels.length > 0">
+      <app-button
+        [variant]="isSelectionMode ? 'primary' : 'secondary'"
+        icon="checklist"
+        (click)="toggleSelectionMode()">
+        {{ isSelectionMode ? 'Cancel Selection' : 'Select Models' }}
+      </app-button>
+
+      <div class="selection-controls" *ngIf="isSelectionMode">
+        <button class="btn-link" (click)="selectAll()">Select All</button>
+        <button class="btn-link" (click)="deselectAll()">Deselect All</button>
+        <app-badge variant="info">{{ selectedModelIds.size }} selected</app-badge>
+        <app-button
+          variant="danger"
+          icon="delete"
+          [disabled]="selectedModelIds.size === 0"
+          (click)="bulkDelete()">
+          Delete Selected
+        </app-button>
+      </div>
     </div>
   </div>
 
   <!-- Error Message -->
-  <div class="error-message" *ngIf="errorMessage">
-    <img src="assets/icons/emojis/warning.png" alt="Error" class="error-icon" />
-    {{ errorMessage }}
-  </div>
+  <app-card *ngIf="errorMessage" class="error-card">
+    <div class="error-content">
+      <mat-icon class="error-icon">error</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+  </app-card>
 
   <!-- Loading State -->
-  <div class="loading-state" *ngIf="isLoading">
-    <div class="spinner-large"></div>
-    <p>Loading models...</p>
+  <div class="loading-container" *ngIf="isLoading">
+    <app-skeleton type="card" [count]="3"></app-skeleton>
   </div>
 
   <!-- Empty State -->
-  <div class="empty-state" *ngIf="!isLoading && filteredModels.length === 0">
-    <img src="assets/icons/emojis/robot.png" alt="Empty" class="empty-icon" />
-    <h3>No models found</h3>
-    <p *ngIf="selectedStatus === 'all'">
-      You haven't trained any models yet. Start by training your first U-Net model!
-    </p>
-    <p *ngIf="selectedStatus !== 'all'">
-      No models with status "{{ getStatusLabel(selectedStatus) }}"
-    </p>
-    <button class="btn-primary" [routerLink]="['/train']" *ngIf="selectedStatus === 'all'">
-      Train Your First Model
-    </button>
+  <div *ngIf="!isLoading && filteredModels.length === 0">
+    <app-empty-state
+      icon="model_training"
+      [title]="selectedStatus === 'all' ? 'No models yet' : 'No ' + getStatusLabel(selectedStatus).toLowerCase() + ' models'"
+      [description]="selectedStatus === 'all' ? 'Train your first U-Net model to get started with medical image segmentation' : 'No models found with this status'">
+      <app-button *ngIf="selectedStatus === 'all'" variant="primary" icon="add" [routerLink]="['/train']">
+        Train Your First Model
+      </app-button>
+    </app-empty-state>
   </div>
 
   <!-- Models Grid -->
   <div class="models-grid" *ngIf="!isLoading && filteredModels.length > 0">
-    <div
-      class="model-card"
+    <app-card
       *ngFor="let model of filteredModels"
-      (click)="viewModelDetails(model.id)"
-    >
-      <div class="model-card-header">
-        <h3 class="model-name">{{ model.name }}</h3>
-        <span class="status-badge" [ngClass]="getStatusClass(model.status)">
-          {{ getStatusLabel(model.status) }}
-        </span>
-      </div>
+      [hover]="!isSelectionMode"
+      class="model-card"
+      [class.selected]="isModelSelected(model.id)"
+      [class.selectable]="isSelectionMode"
+      (click)="isSelectionMode ? toggleModelSelection(model.id, $event) : viewModelDetails(model.id)">
 
-      <div class="model-card-body">
-        <div class="model-info">
-          <div class="info-row">
-            <span class="info-label">Architecture:</span>
-            <span class="info-value">
-              U-Net (Depth: {{ model.depth }}, Filters: {{ model.baseFilters }})
-            </span>
+      <!-- Card Header -->
+      <div class="model-header">
+        <div class="header-left">
+          <input
+            *ngIf="isSelectionMode"
+            type="checkbox"
+            class="model-checkbox"
+            [checked]="isModelSelected(model.id)"
+            (click)="toggleModelSelection(model.id, $event)"
+            (change)="$event.stopPropagation()"
+          />
+          <div class="model-icon">
+            <mat-icon>psychology</mat-icon>
           </div>
-          <div class="info-row">
-            <span class="info-label">Training:</span>
-            <span class="info-value">
-              {{ model.epochs }} epochs, batch {{ model.batchSize }}
-            </span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Loss Function:</span>
-            <span class="info-value">{{ model.lossFunction | uppercase }}</span>
-          </div>
-          <div class="info-row" *ngIf="model.finalDiceScore">
-            <span class="info-label">Dice Score:</span>
-            <span class="info-value metric">
-              {{ (model.finalDiceScore * 100).toFixed(2) }}%
-            </span>
-          </div>
-          <div class="info-row" *ngIf="model.finalLoss">
-            <span class="info-label">Final Loss:</span>
-            <span class="info-value metric">{{ model.finalLoss.toFixed(4) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="model-card-footer">
-        <div class="footer-info">
-          <div class="footer-item">
-            <span class="footer-label">Created:</span>
-            <span class="footer-value">{{ formatDate(model.createdAt) }}</span>
-          </div>
-          <div class="footer-item" *ngIf="model.trainingDurationSeconds">
-            <span class="footer-label">Duration:</span>
-            <span class="footer-value">{{ formatDuration(model.trainingDurationSeconds) }}</span>
+          <div>
+            <h3 class="model-name">{{ model.name }}</h3>
+            <app-badge
+              [variant]="model.status === 'completed' ? 'success' : model.status === 'training' ? 'info' : 'error'"
+              [icon]="model.status === 'completed' ? 'check_circle' : model.status === 'training' ? 'hourglass_empty' : 'error'">
+              {{ getStatusLabel(model.status) }}
+            </app-badge>
           </div>
         </div>
 
         <button
-          class="btn-delete"
+          *ngIf="!isSelectionMode"
+          mat-icon-button
+          class="delete-btn"
           (click)="deleteModel(model, $event)"
-          title="Delete model"
-        >
-          <img src="assets/icons/emojis/trash.png" alt="Delete" />
+          matTooltip="Delete model">
+          <mat-icon>delete</mat-icon>
         </button>
       </div>
-    </div>
+
+      <!-- Card Body -->
+      <div class="model-body">
+        <div class="info-grid">
+          <div class="info-item">
+            <mat-icon>architecture</mat-icon>
+            <div class="info-content">
+              <span class="info-label">Architecture</span>
+              <span class="info-value">U-Net (Depth: {{ model.depth }}, Filters: {{ model.baseFilters }})</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon>settings</mat-icon>
+            <div class="info-content">
+              <span class="info-label">Training</span>
+              <span class="info-value">{{ model.epochs }} epochs, batch {{ model.batchSize }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <mat-icon>functions</mat-icon>
+            <div class="info-content">
+              <span class="info-label">Loss Function</span>
+              <span class="info-value">{{ model.lossFunction | uppercase }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics-section" *ngIf="model.finalDiceScore || model.finalLoss">
+          <div class="metric" *ngIf="model.finalDiceScore">
+            <span class="metric-label">Dice Score</span>
+            <span class="metric-value">{{ (model.finalDiceScore * 100).toFixed(2) }}%</span>
+          </div>
+          <div class="metric" *ngIf="model.finalLoss">
+            <span class="metric-label">Final Loss</span>
+            <span class="metric-value">{{ model.finalLoss.toFixed(4) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div class="model-footer">
+        <div class="footer-item">
+          <mat-icon>schedule</mat-icon>
+          <span>{{ formatDate(model.createdAt) }}</span>
+        </div>
+        <div class="footer-item" *ngIf="model.trainingDurationSeconds">
+          <mat-icon>timer</mat-icon>
+          <span>{{ formatDuration(model.trainingDurationSeconds) }}</span>
+        </div>
+      </div>
+    </app-card>
   </div>
 </div>

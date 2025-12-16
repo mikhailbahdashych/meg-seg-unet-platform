@@ -109,15 +109,14 @@ export class RunPodGraphQLService {
       input: {
         cloudType: 'SECURE',
         gpuCount: 1,
-        volumeInGb: 50,
+        volumeInGb: 20, // Updated to 20GB as per user preference
         containerDiskInGb: 20,
         minVcpuCount: 4,
         minMemoryInGb: 16,
         gpuTypeId: input.gpuTypeId,
         name: input.name,
         imageName:
-          input.imageName ||
-          'runpod/pytorch:2.1.0-py3.10-cuda12.1.1-devel-ubuntu22.04',
+          input.imageName || 'runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404',
         dockerArgs: '',
         ports: '22/tcp',
         volumeMountPath: '/workspace',
@@ -127,21 +126,46 @@ export class RunPodGraphQLService {
     };
 
     try {
+      this.logger.log('Sending pod deployment request to RunPod...');
+      this.logger.debug(`Deployment config: ${JSON.stringify(variables, null, 2)}`);
+
       const data: any = await this.client!.request(mutation, variables);
+
       this.logger.log(
         `Pod deployed successfully: ${data.podFindAndDeployOnDemand.id}`
       );
+      this.logger.debug(
+        `Pod deployment response: ${JSON.stringify(data.podFindAndDeployOnDemand, null, 2)}`
+      );
+
       return data.podFindAndDeployOnDemand;
     } catch (error) {
       this.logger.error(`Error deploying pod: ${error.message}`, error.stack);
 
-      if (error.message.includes('insufficient')) {
+      // Log full error details
+      if (error.response) {
+        this.logger.error(
+          `RunPod API response: ${JSON.stringify(error.response, null, 2)}`
+        );
+      }
+
+      if (
+        error.message.includes('insufficient') ||
+        error.message.includes('credits')
+      ) {
         throw new Error(
           'Insufficient RunPod credits. Please add credits to your account.'
         );
-      } else if (error.message.includes('availability')) {
+      } else if (
+        error.message.includes('availability') ||
+        error.message.includes('No GPUs')
+      ) {
         throw new Error(
           'No GPUs available. Try a different GPU type or try again later.'
+        );
+      } else if (error.message.includes('Unauthorized')) {
+        throw new Error(
+          'RunPod API key is invalid or does not have permission to deploy pods.'
         );
       }
 
@@ -217,6 +241,11 @@ export class RunPodGraphQLService {
       await this.client!.request(mutation, { podId });
       this.logger.log(`Pod terminated: ${podId}`);
     } catch (error) {
+      // If pod is already terminated or not found, don't throw an error
+      if (error.message && error.message.includes('pod not found')) {
+        this.logger.warn(`Pod ${podId} already terminated or not found, ignoring`);
+        return;
+      }
       this.logger.error(`Error terminating pod: ${error.message}`, error.stack);
       throw new Error(`Failed to terminate pod: ${error.message}`);
     }
