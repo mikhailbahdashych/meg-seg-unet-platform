@@ -6,6 +6,7 @@ A web-based medical image segmentation platform using U-Net architecture for aut
 
 - [Overview](#overview)
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -32,6 +33,44 @@ The system provides an end-to-end workflow from dataset upload through model tra
 - **Cloud Storage**: Persistent storage of datasets and models in AWS S3 with local metadata caching
 - **Result Visualization**: View segmentation results with side-by-side and overlay comparisons
 - **Progress Tracking**: Real-time training and inference progress monitoring
+
+## Screenshots
+
+### Home Dashboard
+![Home Dashboard](static/screen1.png)
+
+### Dataset Upload
+![Dataset Upload](static/screen2.png)
+
+### Dataset Management
+![Dataset List](static/screen3.png)
+
+### Model Training Configuration
+![Training Configuration](static/screen4.png)
+
+### Model List
+![Model List](static/screen5.png)
+
+### Model Details and Architecture
+![Model Details](static/screen6.png)
+
+### Training Progress Monitoring
+![Training Progress](static/screen7.png)
+
+### Training History Charts
+![Training History](static/screen8.png)
+
+### U-Net Architecture Visualization
+![U-Net Visualization](static/screen9.png)
+
+### Inference Configuration
+![Inference Setup](static/screen10.png)
+
+### Inference Results
+![Inference Results](static/screen11.png)
+
+### Settings and Configuration
+![Settings Page](static/screen12.png)
 
 ## Architecture
 

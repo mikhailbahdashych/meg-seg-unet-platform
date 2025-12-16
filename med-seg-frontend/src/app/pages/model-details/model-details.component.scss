@@ -42,10 +42,14 @@
 }
 
 // Banners
+app-card.error-banner,
+app-card.progress-banner {
+  display: block;
+  margin-bottom: 24px;
+}
+
 .error-banner,
 .progress-banner {
-  margin-bottom: var(--space-6);
-
   .banner-content {
     @include flex-center;
     gap: var(--space-4);
@@ -79,7 +83,7 @@
 }
 
 .progress-banner {
-  border-left: 4px solid var(--color-primary);
+  // border-left: 4px solid var(--color-primary);
 
   .banner-spinner {
     flex-shrink: 0;
@@ -87,9 +91,12 @@
 }
 
 // Training Progress
-.training-progress {
-  margin-bottom: var(--space-6);
+app-card.training-progress {
+  display: block;
+  margin-bottom: 24px;
+}
 
+.training-progress {
   .progress-bar-wrapper {
     margin: var(--space-4) 0;
     height: 32px;
@@ -388,6 +395,11 @@
 }
 
 // Charts
+app-card.charts-card {
+  display: block;
+  margin-bottom: 24px;
+}
+
 .charts-card {
   .charts-container {
     display: grid;
